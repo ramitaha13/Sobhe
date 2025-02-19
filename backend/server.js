@@ -1,11 +1,19 @@
-const express = require("express");
+// const express = require("express");
 const multer = require("multer");
 const path = require("path");
 const cors = require("cors");
 const fs = require("fs");
 
 const app = express();
-app.use(cors());
+
+// Allow only your frontend to access the API
+const corsOptions = {
+  origin: ["https://sobhe.vercel.app"], // Add your frontend URL here
+  methods: "GET,POST,DELETE",
+  allowedHeaders: "Content-Type",
+};
+
+app.use(cors(corsOptions));
 
 // Define absolute path for the 'uploads' folder
 const uploadDir = path.join(__dirname, "uploads");
@@ -34,8 +42,10 @@ app.post("/upload", upload.single("video"), (req, res) => {
     return res.status(400).json({ error: "No file uploaded." });
   }
 
-  // Generate file URL
-  const fileUrl = `http://localhost:5001/uploads/${req.file.filename}`;
+  // Generate a dynamic file URL
+  const fileUrl = `${req.protocol}://${req.get("host")}/uploads/${
+    req.file.filename
+  }`;
   console.log("File uploaded successfully:", fileUrl);
   res.json({ videoUrl: fileUrl });
 });
@@ -56,7 +66,7 @@ app.get("/videos", (req, res) => {
       })
       .map((filename) => ({
         name: filename,
-        url: `http://localhost:5001/uploads/${filename}`,
+        url: `${req.protocol}://${req.get("host")}/uploads/${filename}`,
         path: path.join(uploadDir, filename),
       }));
 
