@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+// import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Upload, ArrowRight } from "lucide-react";
 
@@ -8,6 +8,10 @@ function VideoUploadAPI() {
   const [previewUrl, setPreviewUrl] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [uploadedVideoUrl, setUploadedVideoUrl] = useState(""); // Store uploaded video URL
+
+  // Change this to your actual backend URL
+  const backendURL = "https://sobhe.vercel.app"; // Example: https://your-backend.onrender.com
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
@@ -15,6 +19,7 @@ function VideoUploadAPI() {
       setVideoFile(file);
       setPreviewUrl(URL.createObjectURL(file));
       setUploadSuccess(false);
+      setUploadedVideoUrl(""); // Clear previous upload
     }
   };
 
@@ -26,7 +31,7 @@ function VideoUploadAPI() {
     formData.append("video", videoFile);
 
     try {
-      const response = await fetch("/upload", {
+      const response = await fetch(`${backendURL}/upload`, {
         method: "POST",
         body: formData,
       });
@@ -35,7 +40,9 @@ function VideoUploadAPI() {
         throw new Error("Upload failed");
       }
 
+      const data = await response.json(); // Get video URL from response
       setUploadSuccess(true);
+      setUploadedVideoUrl(data.videoUrl); // Store uploaded video URL
       setVideoFile(null);
       setPreviewUrl("");
     } catch (error) {
@@ -85,7 +92,7 @@ function VideoUploadAPI() {
               />
               <label
                 htmlFor="videoInput"
-                className="cursor-pointer px-6 py-3 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-duration-300 flex items-center"
+                className="cursor-pointer px-6 py-3 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition duration-300 flex items-center"
               >
                 <Upload className="ml-2 h-5 w-5" />
                 اختر الفيديو
@@ -97,7 +104,7 @@ function VideoUploadAPI() {
               )}
             </div>
 
-            {/* Video Preview */}
+            {/* Video Preview Before Upload */}
             {previewUrl && (
               <div className="mt-6">
                 <video
@@ -123,6 +130,29 @@ function VideoUploadAPI() {
                 {uploading ? "جاري الرفع..." : "رفع الفيديو"}
               </button>
             </div>
+
+            {/* Show Uploaded Video */}
+            {uploadedVideoUrl && (
+              <div className="mt-6">
+                <h3 className="text-lg font-bold text-gray-900">
+                  الفيديو المرفوع:
+                </h3>
+                <video
+                  src={uploadedVideoUrl}
+                  controls
+                  className="w-full rounded-lg shadow-md"
+                />
+                <p className="text-sm text-gray-600 mt-2">
+                  <a
+                    href={uploadedVideoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {uploadedVideoUrl}
+                  </a>
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>
