@@ -59,7 +59,7 @@ const WeddingPage = () => {
             <div className="flex items-center space-x-2">
               <Heart className="h-6 w-6 text-rose-500" />
               <h1 className="text-2xl font-bold bg-gradient-to-r from-rose-500 to-pink-600 bg-clip-text text-transparent">
-                أعراس الفرح
+                زينة فرحك
               </h1>
             </div>
             <div className="flex items-center space-x-4">
