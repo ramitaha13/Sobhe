@@ -131,7 +131,7 @@ const WeddingPage = () => {
                   <Camera className="h-12 w-12 text-rose-500" />
                 </div>
                 <h3 className="text-3xl font-bold text-gray-900 mb-4">
-                  التصوير
+                  لمحة من صور شغلنا
                 </h3>
                 <p className="text-gray-600 text-xl text-center max-w-2xl">
                   انقر هنا لمشاهدة الصور
