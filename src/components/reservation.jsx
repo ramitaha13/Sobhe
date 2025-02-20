@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   getFirestore,
@@ -7,14 +7,16 @@ import {
   deleteDoc,
   doc,
 } from "firebase/firestore";
-import { ArrowLeft, Edit, Trash, Plus } from "lucide-react";
+import { ArrowLeft, Edit, Trash, Plus, Download } from "lucide-react";
 import * as XLSX from "xlsx";
+import * as htmlToImage from "html-to-image";
 
 const ReservationManagement = () => {
   const navigate = useNavigate();
   const [reservations, setReservations] = useState([]);
   const [filterName, setFilterName] = useState("");
   const [filterDate, setFilterDate] = useState("");
+  const tableRef = useRef(null);
   const db = getFirestore();
 
   // Function to fetch reservations from Firestore
@@ -77,6 +79,25 @@ const ReservationManagement = () => {
     XLSX.writeFile(wb, "reservations.xlsx");
   };
 
+  // New function to download table as image
+  const downloadTableAsImage = async () => {
+    if (tableRef.current) {
+      try {
+        const dataUrl = await htmlToImage.toPng(tableRef.current, {
+          quality: 1.0,
+          backgroundColor: "white",
+        });
+
+        const link = document.createElement("a");
+        link.download = "reservations-table.png";
+        link.href = dataUrl;
+        link.click();
+      } catch (error) {
+        console.error("Error generating image:", error);
+      }
+    }
+  };
+
   return (
     <div
       className="min-h-screen bg-gradient-to-b from-pink-50 to-white"
@@ -125,12 +146,21 @@ const ReservationManagement = () => {
             onChange={(e) => setFilterDate(e.target.value)}
             className="px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
           />
-          <button
-            onClick={exportToExcel}
-            className="mt-2 sm:mt-0 px-4 py-2 bg-pink-600 text-white rounded-md hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500"
-          >
-            تصدير إلى Excel
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={exportToExcel}
+              className="mt-2 sm:mt-0 px-4 py-2 bg-pink-600 text-white rounded-md hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500"
+            >
+              تصدير إلى Excel
+            </button>
+            <button
+              onClick={downloadTableAsImage}
+              className="mt-2 sm:mt-0 px-4 py-2 bg-pink-600 text-white rounded-md hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500 flex items-center"
+            >
+              <Download className="h-4 w-4 ml-2" />
+              تحميل كصورة
+            </button>
+          </div>
         </div>
 
         {/* Reservations Table */}
@@ -138,7 +168,10 @@ const ReservationManagement = () => {
           {filteredReservations.length === 0 ? (
             <p className="text-center text-gray-600">لا توجد مواعيد متاحة</p>
           ) : (
-            <table className="w-full border-collapse bg-white shadow-md rounded-lg">
+            <table
+              ref={tableRef}
+              className="w-full border-collapse bg-white shadow-md rounded-lg"
+            >
               <thead>
                 <tr className="bg-pink-50">
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -156,7 +189,10 @@ const ReservationManagement = () => {
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     حالة الحجز
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    تعديل
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                     حذف
                   </th>
                 </tr>
@@ -179,19 +215,20 @@ const ReservationManagement = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {reservation.status}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                       <button
                         onClick={() => handleEditReservation(reservation.id)}
-                        className="text-pink-600 hover:text-pink-900 mr-4"
+                        className="text-pink-600 hover:text-pink-900"
                       >
                         <Edit className="h-4 w-4" />
                       </button>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                       <button
                         onClick={() => handleDeleteReservation(reservation.id)}
-                        className="text-pink-600 hover:text-pink-900 flex items-center"
+                        className="text-pink-600 hover:text-pink-900"
                       >
-                        <Trash className="h-4 w-4 ml-1" />
-                        حذف
+                        <Trash className="h-4 w-4" />
                       </button>
                     </td>
                   </tr>
