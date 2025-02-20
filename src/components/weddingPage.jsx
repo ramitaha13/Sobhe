@@ -37,8 +37,8 @@ const WeddingPage = () => {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: "أعراس الفرح",
-          text: "شاهد صور أعراس الفرح المميزة",
+          title: "صبحي طه",
+          text: "احجز فرحك معنا",
           url: window.location.href,
         });
       } catch (error) {}
@@ -134,7 +134,7 @@ const WeddingPage = () => {
                   التصوير
                 </h3>
                 <p className="text-gray-600 text-xl text-center max-w-2xl">
-                  تصوير احترافي لتوثيق كل لحظة جميلة
+                  انقر هنا لمشاهدة الصور
                 </p>
               </div>
             </div>
