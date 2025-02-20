@@ -51,14 +51,14 @@ const UploadImage = () => {
 
   return (
     <div
-      className="min-h-screen bg-gradient-to-b from-blue-50 to-white p-8"
+      className="min-h-screen bg-gradient-to-b from-pink-50 to-white p-8"
       dir="rtl"
     >
       <div className="max-w-4xl mx-auto">
         {/* Back Button */}
         <button
           onClick={() => navigate("/managerPage")}
-          className="mb-6 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300 flex items-center"
+          className="mb-6 px-6 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors duration-300 flex items-center"
         >
           <ArrowRight className="ml-2 h-4 w-4" />
           العودة
@@ -89,7 +89,7 @@ const UploadImage = () => {
               />
               <label
                 htmlFor="imageInput"
-                className="cursor-pointer px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-duration-300 flex items-center"
+                className="cursor-pointer px-6 py-3 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-duration-300 flex items-center"
               >
                 <Upload className="ml-2 h-5 w-5" />
                 اختر الصورة
@@ -115,12 +115,11 @@ const UploadImage = () => {
               <button
                 onClick={handleUpload}
                 disabled={!imageFile || uploading}
-                className={`px-8 py-3 bg-blue-600 text-white rounded-lg transition-colors duration-300 flex items-center
-                  ${
-                    !imageFile || uploading
-                      ? "opacity-50 cursor-not-allowed"
-                      : "hover:bg-blue-700"
-                  }`}
+                className={`px-8 py-3 bg-pink-600 text-white rounded-lg transition-colors duration-300 flex items-center ${
+                  !imageFile || uploading
+                    ? "opacity-50 cursor-not-allowed"
+                    : "hover:bg-pink-700"
+                }`}
               >
                 {uploading ? "جاري الرفع..." : "رفع الصورة"}
               </button>

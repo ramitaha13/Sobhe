@@ -2,15 +2,19 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import "./index.css";
-import Home from "./components/home.jsx";
 import WeddingPage from "./components/weddingPage.jsx";
-import ShowVideos from "./components/showVideos.jsx";
 import Login from "./components/login.jsx";
 import ManagerPage from "./components/managerPage.jsx";
-import ShowVideosmanager from "./components/showVideosmanager.jsx";
 import UploadImage from "./components/imagesforadmin.jsx";
 import ShowImages from "./components/showImages.jsx";
 import ShowImahesforadmin from "./components/showImahesforadmin.jsx";
+import Reservation from "./components/reservation.jsx";
+import Addreservation from "./components/add-reservation.jsx";
+import Editreservation from "./components/edit-reservation.jsx";
+import SettingsPage from "./components/settingsPage.jsx";
+import BookAppointmentButton from "./components/bookAppointmentButton.jsx";
+import ContactCustomer from "./components/contactCustomer.jsx";
+import ProtectedRoute from "./components/ProtectedRoute.jsx";
 
 const router = createBrowserRouter([
   {
@@ -22,28 +26,24 @@ const router = createBrowserRouter([
     element: <WeddingPage />,
   },
   {
-    path: "/home",
-    element: <Home />,
-  },
-  {
-    path: "/showVideos",
-    element: <ShowVideos />,
-  },
-  {
     path: "/login",
     element: <Login />,
   },
   {
     path: "/managerPage",
-    element: <ManagerPage />,
-  },
-  {
-    path: "/showVideosmanager",
-    element: <ShowVideosmanager />,
+    element: (
+      <ProtectedRoute>
+        <ManagerPage />
+      </ProtectedRoute>
+    ),
   },
   {
     path: "/imagesforadmin",
-    element: <UploadImage />,
+    element: (
+      <ProtectedRoute>
+        <UploadImage />
+      </ProtectedRoute>
+    ),
   },
   {
     path: "/showImages",
@@ -51,7 +51,55 @@ const router = createBrowserRouter([
   },
   {
     path: "/showImahesforadmin",
-    element: <ShowImahesforadmin />,
+    element: (
+      <ProtectedRoute>
+        <ShowImahesforadmin />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/reservation",
+    element: (
+      <ProtectedRoute>
+        <Reservation />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/add-reservation",
+    element: (
+      <ProtectedRoute>
+        <Addreservation />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/edit-reservation/:id",
+    element: (
+      <ProtectedRoute>
+        <Editreservation />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/settings",
+    element: (
+      <ProtectedRoute>
+        <SettingsPage />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/bookAppointmentButton",
+    element: <BookAppointmentButton />,
+  },
+  {
+    path: "/contactCustomer",
+    element: (
+      <ProtectedRoute>
+        <ContactCustomer />
+      </ProtectedRoute>
+    ),
   },
 ]);
 

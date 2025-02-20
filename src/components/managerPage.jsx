@@ -1,6 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Image, Video, Users, Settings } from "lucide-react";
+import { LogOut, Image, Video, Settings, MessageSquare } from "lucide-react";
 
 const ManagerPage = () => {
   const navigate = useNavigate();
@@ -25,22 +25,16 @@ const ManagerPage = () => {
       description: "تعديل معرض الصور",
     },
     {
-      title: "إدارة الفيديو",
+      title: "إدارة الحجوزات",
       icon: <Video className="h-8 w-8 text-pink-600" />,
-      onClick: () => navigate("/home"),
-      description: "إضافة  مقاطع الفيديو",
+      onClick: () => navigate("/reservation"),
+      description: "إدارة حجوزات العملاء",
     },
     {
-      title: "عرض الفيديو",
-      icon: <Image className="h-8 w-8 text-pink-600" />,
-      onClick: () => navigate("/showVideosmanager"),
-      description: "تعديل معرض الفيديو",
-    },
-    {
-      title: "إدارة المستخدمين",
-      icon: <Users className="h-8 w-8 text-pink-600" />,
-      onClick: () => navigate("/users"),
-      description: "إدارة حسابات المستخدمين",
+      title: "تواصل مع الزبون",
+      icon: <MessageSquare className="h-8 w-8 text-pink-600" />,
+      onClick: () => navigate("/contactCustomer"),
+      description: "ارسل رسالة للزبون",
     },
     {
       title: "الإعدادات",
@@ -56,7 +50,7 @@ const ManagerPage = () => {
       dir="rtl"
     >
       {/* Header */}
-      <div className="bg-white shadow-sm">
+      <header className="bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex-shrink-0">
@@ -74,11 +68,11 @@ const ManagerPage = () => {
             </div>
           </div>
         </div>
-      </div>
+      </header>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {menuItems.map((item, index) => (
             <div
               key={index}
@@ -95,7 +89,7 @@ const ManagerPage = () => {
             </div>
           ))}
         </div>
-      </div>
+      </main>
     </div>
   );
 };

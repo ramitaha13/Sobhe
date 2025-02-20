@@ -48,16 +48,16 @@ const ShowImagesAdmin = () => {
   };
 
   const handleBack = () => {
-    navigate("/");
+    navigate("/managerPage");
   };
 
   if (loading) {
     return (
       <div
-        className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center"
+        className="min-h-screen bg-gradient-to-b from-pink-50 to-white flex items-center justify-center"
         dir="rtl"
       >
-        <div className="text-xl text-blue-600">جاري التحميل...</div>
+        <div className="text-xl text-pink-600">جاري التحميل...</div>
       </div>
     );
   }
@@ -65,7 +65,7 @@ const ShowImagesAdmin = () => {
   if (error) {
     return (
       <div
-        className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center"
+        className="min-h-screen bg-gradient-to-b from-pink-50 to-white flex items-center justify-center"
         dir="rtl"
       >
         <div className="text-xl text-red-600">{error}</div>
@@ -75,26 +75,26 @@ const ShowImagesAdmin = () => {
 
   return (
     <div
-      className="min-h-screen bg-gradient-to-b from-blue-50 to-white p-8"
+      className="min-h-screen bg-gradient-to-b from-pink-50 to-white p-8"
       dir="rtl"
     >
       <div className="max-w-7xl mx-auto">
         {/* Back Button */}
         <button
           onClick={handleBack}
-          className="mb-6 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300 flex items-center"
+          className="mb-6 px-6 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors duration-300 flex items-center"
         >
           <span>العودة</span>
         </button>
 
         {/* Enhanced Title Design */}
         <div className="text-center mb-12 relative">
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-20 bg-blue-100 rounded-full opacity-50 blur-xl"></div>
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-64 h-20 bg-pink-100 rounded-full opacity-50 blur-xl"></div>
           <h1 className="text-5xl font-bold text-gray-900 relative">
             <span className="relative inline-block">
               معرض الصور (الإدارة)
-              <div className="absolute -bottom-2 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent"></div>
-              <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 w-16 h-1 bg-blue-400 rounded-full"></div>
+              <div className="absolute -bottom-2 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-pink-500 to-transparent"></div>
+              <div className="absolute -bottom-4 left-1/2 transform -translate-x-1/2 w-16 h-1 bg-pink-400 rounded-full"></div>
             </span>
           </h1>
         </div>

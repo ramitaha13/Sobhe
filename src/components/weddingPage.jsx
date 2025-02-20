@@ -2,7 +2,6 @@ import React from "react";
 import {
   Heart,
   Camera,
-  Video,
   Music,
   Utensils,
   MapPin,
@@ -10,8 +9,12 @@ import {
   Calendar,
   Mail,
   LogIn,
+  Instagram, // Instagram icon from lucide-react
+  User,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { SiTiktok } from "react-icons/si"; // TikTok icon from react-icons
+import { FaWhatsapp } from "react-icons/fa"; // WhatsApp icon from react-icons/fa
 
 const WeddingPage = () => {
   const navigate = useNavigate();
@@ -20,12 +23,12 @@ const WeddingPage = () => {
     navigate("/login");
   };
 
-  const handleVideoClick = () => {
-    navigate("/showVideos");
-  };
-
   const handlePhotoClick = () => {
     navigate("/showImages"); // Navigate to ShowImages page
+  };
+
+  const handleBookAppointment = () => {
+    navigate("/bookAppointmentButton");
   };
 
   return (
@@ -63,15 +66,18 @@ const WeddingPage = () => {
               نقدم خدمات متكاملة لتنظيم حفلات الزفاف بأعلى مستويات الجودة
               والاحترافية
             </p>
+            <p className="mt-3 max-w-md mx-auto text-base text-gray-500 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl">
+              سجل تاريخ المناسبه ونحن سوف نعود للحديث معك
+            </p>
             <div className="mt-5 max-w-md mx-auto sm:flex sm:justify-center md:mt-8">
               <div className="rounded-md shadow">
-                <a
-                  href="#"
+                <button
+                  onClick={handleBookAppointment}
                   className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-pink-600 hover:bg-pink-700 md:py-4 md:text-lg md:px-10"
                 >
-                  احجز موعدك الآن
+                  حدد موعد مناسبتك وسنتواصل معك قريبًا
                   <Calendar className="mr-2 h-5 w-5" />
-                </a>
+                </button>
               </div>
             </div>
           </div>
@@ -86,8 +92,7 @@ const WeddingPage = () => {
               خدماتنا المميزة
             </h2>
           </div>
-
-          <div className="mt-12 grid gap-8 grid-cols-1 md:grid-cols-2">
+          <div className="mt-12 grid gap-8 grid-cols-1 md:grid-cols-1">
             {/* Photo Service Button */}
             <div
               onClick={handlePhotoClick}
@@ -103,36 +108,49 @@ const WeddingPage = () => {
                 </p>
               </div>
             </div>
-
-            {/* Video Service Button */}
-            <div
-              onClick={handleVideoClick}
-              className="bg-pink-50 rounded-2xl p-8 hover:shadow-lg transition-shadow duration-300 cursor-pointer"
-            >
-              <div className="flex flex-col items-center justify-center">
-                <Video className="h-12 w-12 text-pink-600 mb-4" />
-                <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                  الفيديو
-                </h3>
-                <p className="text-gray-600 text-center text-lg">
-                  توثيق لحظاتك الجميلة بأحدث تقنيات التصوير
-                </p>
-              </div>
-            </div>
           </div>
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="bg-white">
-        <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <p className="text-gray-500">
-              جميع الحقوق محفوظة © 2025 أعراس الفرح
-            </p>
+      {/* Contact Us Section */}
+      <div className="py-16 bg-pink-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl font-bold text-gray-900 mb-8">تواصل معنا</h2>
+          <div className="flex flex-col items-center space-y-4">
+            <a href="tel:0546784883" className="flex items-center space-x-2">
+              <Phone className="h-6 w-6 text-pink-600" />
+              <span className="text-lg text-gray-700">0546784883</span>
+            </a>
+            <div className="flex items-center space-x-2">
+              <User className="h-6 w-6 text-pink-600" />
+              <span className="text-lg text-gray-700">صبحي الجنجي</span>
+            </div>
+            <div className="flex space-x-6 mt-4">
+              <a
+                href="https://www.instagram.com/event_jnje/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Instagram className="h-8 w-8 text-pink-600 cursor-pointer" />
+              </a>
+              <a
+                href="https://wa.me/message/G6C6IOTHEO3WK1"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <FaWhatsapp className="h-8 w-8 text-pink-600 cursor-pointer" />
+              </a>
+              <a
+                href="https://www.tiktok.com/@event_jnje"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <SiTiktok className="h-8 w-8 text-pink-600 cursor-pointer" />
+              </a>
+            </div>
           </div>
         </div>
-      </footer>
+      </div>
     </div>
   );
 };
