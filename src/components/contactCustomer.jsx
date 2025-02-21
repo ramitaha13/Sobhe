@@ -6,6 +6,8 @@ import {
   getDocs,
   doc,
   deleteDoc,
+  query,
+  where,
 } from "firebase/firestore";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import * as XLSX from "xlsx";
@@ -43,10 +45,30 @@ const ShowAppointments = () => {
     navigate(-1);
   };
 
-  const handleDelete = async (appointmentId) => {
+  const handleDelete = async (appointmentId, appointmentData) => {
     if (window.confirm("هل أنت متأكد أنك تريد حذف هذا الموعد؟")) {
       try {
+        // Delete from schedule collection
         await deleteDoc(doc(db, "schedule", appointmentId));
+
+        // Find and delete associated notification
+        const notificationsRef = collection(db, "notifications");
+        const notificationsQuery = query(
+          notificationsRef,
+          where("customerName", "==", appointmentData.customerName),
+          where("date", "==", appointmentData.date)
+        );
+
+        const notificationsSnapshot = await getDocs(notificationsQuery);
+
+        // Delete all matching notifications
+        const deletePromises = notificationsSnapshot.docs.map((doc) =>
+          deleteDoc(doc.ref)
+        );
+
+        await Promise.all(deletePromises);
+
+        // Update local state
         setAppointments((prev) =>
           prev.filter((appt) => appt.id !== appointmentId)
         );
@@ -180,7 +202,7 @@ const ShowAppointments = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button
-                        onClick={() => handleDelete(appt.id)}
+                        onClick={() => handleDelete(appt.id, appt)}
                         className="text-pink-600 hover:text-pink-900 flex items-center"
                       >
                         <Trash2 className="h-4 w-4 ml-1" />

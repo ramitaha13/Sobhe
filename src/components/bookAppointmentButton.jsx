@@ -19,19 +19,31 @@ const BookAppointmentButton = () => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Prepare appointment data without the status field and with phone number
+    // Prepare appointment data
     const appointmentData = {
       customerName,
       regon,
       date,
       phone,
+      createdAt: new Date(), // Add timestamp for notifications
     };
 
     try {
-      // Save appointment data in the "schedule" collection
-      await addDoc(collection(db, "schedule"), appointmentData);
+      // Save to both collections in parallel
+      await Promise.all([
+        // Save to schedule collection
+        addDoc(collection(db, "schedule"), appointmentData),
+        // Save to notifications collection
+        addDoc(collection(db, "notifications"), {
+          ...appointmentData,
+          type: "appointment",
+          read: false,
+          message: `موعد جديد: ${customerName} - ${date}`,
+        }),
+      ]);
+
       setSuccessMessage("تم حفظ الموعد بنجاح");
-      // After 2 seconds, navigate to the schedule page (adjust as needed)
+      // After 2 seconds, navigate to the schedule page
       setTimeout(() => {
         navigate("/schedule");
       }, 2000);
