@@ -20,7 +20,6 @@ import { useNavigate } from "react-router-dom";
 import { SiTiktok } from "react-icons/si";
 import { FaWhatsapp } from "react-icons/fa";
 import { getFirestore, collection, getDocs } from "firebase/firestore";
-// Import videos
 import video1 from "/src/assets/1.mp4";
 import video2 from "/src/assets/2.mp4";
 
@@ -44,18 +43,23 @@ const WeddingPage = () => {
     }
   };
 
-  // Fullscreen toggle handler for a video element
+  // Attempt both the standard Fullscreen API and the iOS Safari fallback
   const handleToggleFullscreen = (videoRef) => {
-    if (videoRef.current) {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (video.requestFullscreen) {
       if (!document.fullscreenElement) {
-        videoRef.current.requestFullscreen();
+        video.requestFullscreen();
       } else {
         document.exitFullscreen();
       }
+    } else if (video.webkitEnterFullscreen) {
+      // For iOS Safari
+      video.webkitEnterFullscreen();
     }
   };
 
-  // Fetch profile images from Firestore
   useEffect(() => {
     const fetchProfileImages = async () => {
       const db = getFirestore();
@@ -71,14 +75,13 @@ const WeddingPage = () => {
     fetchProfileImages();
   }, []);
 
-  // Auto-slide effect
   useEffect(() => {
     if (profileImages.length > 0) {
       const interval = setInterval(() => {
         setCurrentImageIndex((prevIndex) =>
           prevIndex === profileImages.length - 1 ? 0 : prevIndex + 1
         );
-      }, 3000); // Change slide every 3 seconds
+      }, 3000);
 
       return () => clearInterval(interval);
     }
@@ -206,7 +209,7 @@ const WeddingPage = () => {
           </div>
           <div className="relative">
             <div
-              onClick={handlePhotoClick}
+              onClick={() => navigate("/showImages")}
               className="bg-gradient-to-br from-rose-50 to-pink-50 rounded-3xl p-12 hover:shadow-2xl transition-all duration-300 cursor-pointer transform hover:scale-105 border border-rose-100"
             >
               <div className="flex flex-col items-center justify-center">
