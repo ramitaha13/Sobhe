@@ -1,6 +1,13 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Image, Video, Settings, MessageSquare } from "lucide-react";
+import {
+  LogOut,
+  Image,
+  Video,
+  Settings,
+  MessageSquare,
+  UserCircle,
+} from "lucide-react";
 
 const ManagerPage = () => {
   const navigate = useNavigate();
@@ -41,6 +48,12 @@ const ManagerPage = () => {
       icon: <Settings className="h-8 w-8 text-pink-600" />,
       onClick: () => navigate("/settings"),
       description: "إعدادات النظام",
+    },
+    {
+      title: "صور الملف الشخصي",
+      icon: <UserCircle className="h-8 w-8 text-pink-600" />,
+      onClick: () => navigate("/profileImages"),
+      description: "إدارة صور الملف الشخصي",
     },
   ];
 

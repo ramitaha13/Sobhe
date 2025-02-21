@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   Heart,
   Camera,
@@ -17,9 +17,41 @@ import {
 import { useNavigate } from "react-router-dom";
 import { SiTiktok } from "react-icons/si";
 import { FaWhatsapp } from "react-icons/fa";
+import { getFirestore, collection, getDocs } from "firebase/firestore";
 
 const WeddingPage = () => {
   const navigate = useNavigate();
+  const [profileImages, setProfileImages] = useState([]);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  // Fetch profile images from Firestore
+  useEffect(() => {
+    const fetchProfileImages = async () => {
+      const db = getFirestore();
+      const profileImagesRef = collection(db, "profileimages");
+      try {
+        const querySnapshot = await getDocs(profileImagesRef);
+        const images = querySnapshot.docs.map((doc) => doc.data().image);
+        setProfileImages(images);
+      } catch (error) {
+        console.error("Error fetching profile images:", error);
+      }
+    };
+    fetchProfileImages();
+  }, []);
+
+  // Auto-slide effect
+  useEffect(() => {
+    if (profileImages.length > 0) {
+      const interval = setInterval(() => {
+        setCurrentImageIndex((prevIndex) =>
+          prevIndex === profileImages.length - 1 ? 0 : prevIndex + 1
+        );
+      }, 3000); // Change slide every 3 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [profileImages]);
 
   const handleLogin = () => {
     navigate("/login");
@@ -83,31 +115,51 @@ const WeddingPage = () => {
       </div>
 
       {/* Hero Section */}
-      <div className="pt-32 pb-20 bg-gradient-to-b from-rose-50/50 to-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <div className="flex justify-center items-center mb-6">
-              <Sparkles className="h-8 w-8 text-rose-500 animate-pulse" />
+      <div className="relative min-h-screen flex items-center">
+        {/* Background Slider */}
+        <div className="absolute inset-0 overflow-hidden">
+          {profileImages.map((image, index) => (
+            <div
+              key={index}
+              className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+                index === currentImageIndex ? "opacity-100" : "opacity-0"
+              }`}
+            >
+              <img src={image} alt="" className="w-full h-full object-cover" />
             </div>
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-rose-500 to-pink-600 tracking-tight mb-6">
-              <span className="block">اجعل يومك الخاص</span>
-              <span className="block">لا يُنسى</span>
-            </h1>
-            <p className="mt-6 text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">
-              نقدم خدمات متكاملة لتنظيم حفلات الزفاف بأعلى مستويات الجودة
-              والاحترافية
-            </p>
-            <p className="mt-4 text-xl text-gray-600 max-w-3xl mx-auto">
-              سجل تاريخ المناسبه ونحن سوف نعود للحديث معك
-            </p>
-            <div className="mt-10">
-              <button
-                onClick={handleBookAppointment}
-                className="inline-flex items-center px-8 py-4 text-lg font-medium rounded-full text-white bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl"
-              >
-                حدد موعد مناسبتك وسنتواصل معك قريبًا
-                <Calendar className="mr-3 h-6 w-6" />
-              </button>
+          ))}
+          {/* Overlay gradients */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/50 to-black/30" />
+          <div className="absolute inset-0 bg-rose-900/20" />
+        </div>
+
+        {/* Content */}
+        <div className="relative pt-32 pb-20 w-full">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center">
+              <div className="flex justify-center items-center mb-6">
+                <Sparkles className="h-8 w-8 text-rose-100 animate-pulse" />
+              </div>
+              <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-white tracking-tight mb-6 drop-shadow-lg">
+                <span className="block">اجعل يومك الخاص</span>
+                <span className="block">لا يُنسى</span>
+              </h1>
+              <p className="mt-6 text-xl text-rose-50 max-w-3xl mx-auto leading-relaxed drop-shadow">
+                نقدم خدمات متكاملة لتنظيم حفلات الزفاف بأعلى مستويات الجودة
+                والاحترافية
+              </p>
+              <p className="mt-4 text-xl text-rose-50 max-w-3xl mx-auto drop-shadow">
+                سجل تاريخ المناسبه ونحن سوف نعود للحديث معك
+              </p>
+              <div className="mt-10">
+                <button
+                  onClick={handleBookAppointment}
+                  className="inline-flex items-center px-8 py-4 text-lg font-medium rounded-full text-white bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl backdrop-blur-sm"
+                >
+                  حدد موعد مناسبتك وسنتواصل معك قريبًا
+                  <Calendar className="mr-3 h-6 w-6" />
+                </button>
+              </div>
             </div>
           </div>
         </div>

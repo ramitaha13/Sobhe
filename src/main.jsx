@@ -15,6 +15,7 @@ import SettingsPage from "./components/settingsPage.jsx";
 import BookAppointmentButton from "./components/bookAppointmentButton.jsx";
 import ContactCustomer from "./components/contactCustomer.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
+import ProfileImages from "./components/profileImages.jsx";
 
 const router = createBrowserRouter([
   {
@@ -98,6 +99,14 @@ const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <ContactCustomer />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/profileImages",
+    element: (
+      <ProtectedRoute>
+        <ProfileImages />
       </ProtectedRoute>
     ),
   },
