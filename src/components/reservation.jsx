@@ -79,7 +79,7 @@ const ReservationManagement = () => {
     XLSX.writeFile(wb, "reservations.xlsx");
   };
 
-  // New function to download table as image
+  // Function to download table as image
   const downloadTableAsImage = async () => {
     if (tableRef.current) {
       try {
@@ -161,6 +161,13 @@ const ReservationManagement = () => {
               تحميل كصورة
             </button>
           </div>
+        </div>
+
+        {/* Display reservation count */}
+        <div className="mb-4 text-right">
+          <p className="text-gray-700 font-bold">
+            عدد الحجوزات: {filteredReservations.length}
+          </p>
         </div>
 
         {/* Reservations Table */}
