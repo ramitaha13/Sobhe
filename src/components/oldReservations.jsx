@@ -130,8 +130,8 @@ const OldReservationManagement = () => {
             قائمة الحجوزات القديمة
           </h2>
 
-          {/* Export Buttons */}
-          <div className="flex space-x-2">
+          {/* Export Buttons for larger screens */}
+          <div className="hidden sm:flex space-x-2">
             <button
               onClick={exportToExcel}
               className="px-4 py-2 bg-pink-600 text-white rounded-md hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500"
@@ -164,6 +164,23 @@ const OldReservationManagement = () => {
             onChange={(e) => setFilterDate(e.target.value)}
             className="px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
           />
+        </div>
+
+        {/* Export Buttons for phone screens (visible only on mobile) */}
+        <div className="flex flex-col gap-2 mb-6 sm:hidden">
+          <button
+            onClick={exportToExcel}
+            className="px-4 py-2 bg-pink-600 text-white rounded-md hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500"
+          >
+            تصدير إلى Excel
+          </button>
+          <button
+            onClick={downloadTableAsImage}
+            className="px-4 py-2 bg-pink-600 text-white rounded-md hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500 flex items-center"
+          >
+            <Download className="h-4 w-4 ml-2" />
+            تحميل كصورة
+          </button>
         </div>
 
         {/* Display reservation count */}
