@@ -1,24 +1,19 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Heart,
   Camera,
-  Music,
-  Utensils,
-  MapPin,
-  Phone,
   Calendar,
-  Mail,
   LogIn,
-  Instagram,
-  User,
   Share2,
   Sparkles,
-  Play,
   Maximize,
+  Phone,
+  User,
+  Instagram,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { SiTiktok } from "react-icons/si";
 import { FaWhatsapp } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
 import { getFirestore, collection, getDocs } from "firebase/firestore";
 import video1 from "/src/assets/1.mp4";
 import video2 from "/src/assets/2.mp4";
@@ -30,9 +25,10 @@ const WeddingPage = () => {
   const [playing1, setPlaying1] = useState(false);
   const [playing2, setPlaying2] = useState(false);
 
-  const videoRef1 = React.useRef(null);
-  const videoRef2 = React.useRef(null);
+  const videoRef1 = useRef(null);
+  const videoRef2 = useRef(null);
 
+  // Toggle play/pause for a video
   const handleVideoPlay = (videoRef, setPlaying) => {
     if (videoRef.current.paused) {
       videoRef.current.play();
@@ -43,11 +39,10 @@ const WeddingPage = () => {
     }
   };
 
-  // Attempt both the standard Fullscreen API and the iOS Safari fallback
+  // Toggle fullscreen (with fallback for iOS Safari)
   const handleToggleFullscreen = (videoRef) => {
     const video = videoRef.current;
     if (!video) return;
-
     if (video.requestFullscreen) {
       if (!document.fullscreenElement) {
         video.requestFullscreen();
@@ -82,7 +77,6 @@ const WeddingPage = () => {
           prevIndex === profileImages.length - 1 ? 0 : prevIndex + 1
         );
       }, 3000);
-
       return () => clearInterval(interval);
     }
   }, [profileImages]);
@@ -107,9 +101,11 @@ const WeddingPage = () => {
           text: "احجز فرحك معنا",
           url: window.location.href,
         });
-      } catch (error) {}
+      } catch (error) {
+        // Share was canceled or not supported
+      }
     } else {
-      alert("نسخ الرابط: " + window.location.href);
+      alert("انسخ الرابط: " + window.location.href);
     }
   };
 
@@ -148,8 +144,8 @@ const WeddingPage = () => {
         </div>
       </div>
 
-      {/* Hero Section */}
-      <div className="relative min-h-screen flex items-center">
+      {/* Hero Section - Updated to 60vh */}
+      <div className="relative h-[70vh] w-full flex items-center">
         {/* Background Slider */}
         <div className="absolute inset-0 overflow-hidden">
           {profileImages.map((image, index) => (
@@ -167,33 +163,31 @@ const WeddingPage = () => {
           <div className="absolute inset-0 bg-rose-900/20" />
         </div>
 
-        {/* Content */}
-        <div className="relative pt-32 pb-20 w-full">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center">
-              <div className="flex justify-center items-center mb-6">
-                <Sparkles className="h-8 w-8 text-rose-100 animate-pulse" />
-              </div>
-              <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold text-white tracking-tight mb-6 drop-shadow-lg">
-                <span className="block">اجعل يومك الخاص</span>
-                <span className="block">لا يُنسى</span>
-              </h1>
-              <p className="mt-6 text-xl text-rose-50 max-w-3xl mx-auto leading-relaxed drop-shadow">
-                نقدم خدمات متكاملة لتنظيم حفلات الزفاف بأعلى مستويات الجودة
-                والاحترافية
-              </p>
-              <p className="mt-4 text-xl text-rose-50 max-w-3xl mx-auto drop-shadow">
-                سجل تاريخ المناسبه ونحن سوف نعود للحديث معك
-              </p>
-              <div className="mt-10">
-                <button
-                  onClick={handleBookAppointment}
-                  className="inline-flex items-center px-8 py-4 text-lg font-medium rounded-full text-white bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl backdrop-blur-sm"
-                >
-                  حدد موعد مناسبتك وسنتواصل معك قريبًا
-                  <Calendar className="mr-3 h-6 w-6" />
-                </button>
-              </div>
+        {/* Hero Content */}
+        <div className="relative z-10 w-full">
+          <div className="max-w-7xl mx-auto px-4 text-center">
+            <div className="flex justify-center items-center mb-4">
+              <Sparkles className="h-8 w-8 text-rose-100 animate-pulse" />
+            </div>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white drop-shadow mb-4">
+              <span className="block">اجعل يومك الخاص</span>
+              <span className="block">لا يُنسى</span>
+            </h1>
+            <p className="text-lg text-rose-50 max-w-2xl mx-auto leading-relaxed drop-shadow">
+              نقدم خدمات متكاملة لتنظيم حفلات الزفاف بأعلى مستويات الجودة
+              والاحترافية
+            </p>
+            <p className="mt-2 text-lg text-rose-50 max-w-2xl mx-auto drop-shadow">
+              سجل تاريخ المناسبة ونحن سوف نعود للحديث معك
+            </p>
+            <div className="mt-6">
+              <button
+                onClick={handleBookAppointment}
+                className="inline-flex items-center px-6 py-3 text-lg font-medium rounded-full text-white bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 transform hover:scale-105 transition-all duration-200 shadow-lg backdrop-blur-sm"
+              >
+                حدد موعد مناسبتك وسنتواصل معك قريبًا
+                <Calendar className="ml-3 h-6 w-6" />
+              </button>
             </div>
           </div>
         </div>
@@ -207,10 +201,10 @@ const WeddingPage = () => {
               الصور المميزة
             </h2>
           </div>
-          <div className="relative">
+          <div className="flex justify-center">
             <div
-              onClick={() => navigate("/showImages")}
-              className="bg-gradient-to-br from-rose-50 to-pink-50 rounded-3xl p-12 hover:shadow-2xl transition-all duration-300 cursor-pointer transform hover:scale-105 border border-rose-100"
+              onClick={handlePhotoClick}
+              className="bg-gradient-to-br from-rose-50 to-pink-50 rounded-3xl p-12 transition-transform duration-300 cursor-pointer hover:scale-105 border border-rose-100 shadow-lg hover:shadow-2xl max-w-xl w-full"
             >
               <div className="flex flex-col items-center justify-center">
                 <div className="bg-white p-6 rounded-full shadow-lg mb-8">
@@ -229,95 +223,94 @@ const WeddingPage = () => {
       </div>
 
       {/* Videos Section */}
-      <div className="py-20 bg-gradient-to-b from-white to-rose-50">
+      <div className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-extrabold bg-gradient-to-r from-rose-500 to-pink-600 bg-clip-text text-transparent">
               لحظات مميزة
             </h2>
-            <p className="mt-4 text-lg text-gray-600">
+            <p className="mt-2 text-lg text-gray-600">
               شاهد أجمل اللحظات التي صنعناها
             </p>
           </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* First Video */}
-            <div className="group relative bg-black/5 rounded-2xl overflow-hidden">
-              <video
-                ref={videoRef1}
-                className="w-full aspect-video object-contain cursor-pointer"
-                onContextMenu={(e) => e.preventDefault()}
-                controlsList="nodownload"
-                playsInline
-                loop
-              >
-                <source src={video1} type="video/mp4" />
-              </video>
-
-              {/* Custom Play Button Overlay */}
-              <div
-                className={`absolute inset-0 bg-black/30 flex items-center justify-center transition-opacity duration-300 ${
-                  playing1 ? "opacity-0" : "opacity-100"
-                } group-hover:opacity-100`}
-                onClick={() => handleVideoPlay(videoRef1, setPlaying1)}
-              >
-                <div className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center transform transition-transform duration-300 group-hover:scale-110">
-                  {playing1 ? (
-                    <div className="w-4 h-8 bg-rose-500 mx-1" />
-                  ) : (
-                    <div className="w-0 h-0 border-t-[12px] border-t-transparent border-l-[20px] border-l-rose-500 border-b-[12px] border-b-transparent ml-1" />
-                  )}
-                </div>
-              </div>
-
-              {/* Fullscreen Toggle Button */}
-              <div className="absolute bottom-4 right-4">
-                <button
-                  onClick={() => handleToggleFullscreen(videoRef1)}
-                  className="bg-white/70 p-2 rounded-full shadow hover:bg-white"
+            <div className="group relative bg-rose-50 rounded-2xl overflow-hidden shadow">
+              <div className="relative aspect-video">
+                <video
+                  ref={videoRef1}
+                  className="w-full h-full object-contain cursor-pointer"
+                  onContextMenu={(e) => e.preventDefault()}
+                  controlsList="nodownload"
+                  playsInline
+                  loop
                 >
-                  <Maximize className="h-5 w-5 text-rose-500" />
-                </button>
+                  <source src={video1} type="video/mp4" />
+                </video>
+                {/* Play Overlay */}
+                <div
+                  className={`absolute inset-0 bg-black/30 flex items-center justify-center transition-opacity duration-300 ${
+                    playing1 ? "opacity-0" : "opacity-100"
+                  }`}
+                  onClick={() => handleVideoPlay(videoRef1, setPlaying1)}
+                >
+                  <div className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center transform transition-transform duration-300 hover:scale-110">
+                    {playing1 ? (
+                      <div className="w-4 h-8 bg-rose-500 mx-1" />
+                    ) : (
+                      <div className="w-0 h-0 border-t-[12px] border-t-transparent border-l-[20px] border-l-rose-500 border-b-[12px] border-b-transparent ml-1" />
+                    )}
+                  </div>
+                </div>
+                {/* Fullscreen Toggle */}
+                <div className="absolute bottom-4 right-4">
+                  <button
+                    onClick={() => handleToggleFullscreen(videoRef1)}
+                    className="bg-white/70 p-2 rounded-full shadow hover:bg-white"
+                  >
+                    <Maximize className="h-5 w-5 text-rose-500" />
+                  </button>
+                </div>
               </div>
             </div>
 
             {/* Second Video */}
-            <div className="group relative bg-black/5 rounded-2xl overflow-hidden">
-              <video
-                ref={videoRef2}
-                className="w-full aspect-video object-contain cursor-pointer"
-                onContextMenu={(e) => e.preventDefault()}
-                controlsList="nodownload"
-                playsInline
-                loop
-              >
-                <source src={video2} type="video/mp4" />
-              </video>
-
-              {/* Custom Play Button Overlay */}
-              <div
-                className={`absolute inset-0 bg-black/30 flex items-center justify-center transition-opacity duration-300 ${
-                  playing2 ? "opacity-0" : "opacity-100"
-                } group-hover:opacity-100`}
-                onClick={() => handleVideoPlay(videoRef2, setPlaying2)}
-              >
-                <div className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center transform transition-transform duration-300 group-hover:scale-110">
-                  {playing2 ? (
-                    <div className="w-4 h-8 bg-rose-500 mx-1" />
-                  ) : (
-                    <div className="w-0 h-0 border-t-[12px] border-t-transparent border-l-[20px] border-l-rose-500 border-b-[12px] border-b-transparent ml-1" />
-                  )}
-                </div>
-              </div>
-
-              {/* Fullscreen Toggle Button */}
-              <div className="absolute bottom-4 right-4">
-                <button
-                  onClick={() => handleToggleFullscreen(videoRef2)}
-                  className="bg-white/70 p-2 rounded-full shadow hover:bg-white"
+            <div className="group relative bg-rose-50 rounded-2xl overflow-hidden shadow">
+              <div className="relative aspect-video">
+                <video
+                  ref={videoRef2}
+                  className="w-full h-full object-contain cursor-pointer"
+                  onContextMenu={(e) => e.preventDefault()}
+                  controlsList="nodownload"
+                  playsInline
+                  loop
                 >
-                  <Maximize className="h-5 w-5 text-rose-500" />
-                </button>
+                  <source src={video2} type="video/mp4" />
+                </video>
+                {/* Play Overlay */}
+                <div
+                  className={`absolute inset-0 bg-black/30 flex items-center justify-center transition-opacity duration-300 ${
+                    playing2 ? "opacity-0" : "opacity-100"
+                  }`}
+                  onClick={() => handleVideoPlay(videoRef2, setPlaying2)}
+                >
+                  <div className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center transform transition-transform duration-300 hover:scale-110">
+                    {playing2 ? (
+                      <div className="w-4 h-8 bg-rose-500 mx-1" />
+                    ) : (
+                      <div className="w-0 h-0 border-t-[12px] border-t-transparent border-l-[20px] border-l-rose-500 border-b-[12px] border-b-transparent ml-1" />
+                    )}
+                  </div>
+                </div>
+                {/* Fullscreen Toggle */}
+                <div className="absolute bottom-4 right-4">
+                  <button
+                    onClick={() => handleToggleFullscreen(videoRef2)}
+                    className="bg-white/70 p-2 rounded-full shadow hover:bg-white"
+                  >
+                    <Maximize className="h-5 w-5 text-rose-500" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -333,7 +326,7 @@ const WeddingPage = () => {
           <div className="flex flex-col items-center space-y-6">
             <a
               href="tel:0546784883"
-              className="flex items-center space-x-3 bg-white px-6 py-4 rounded-full shadow-md hover:shadow-lg transition-all duration-200"
+              className="flex items-center space-x-3 bg-white px-6 py-4 rounded-full shadow-md hover:shadow-xl transition-all duration-200"
             >
               <Phone className="h-6 w-6 text-rose-500" />
               <span className="text-xl text-gray-700">0546784883</span>
