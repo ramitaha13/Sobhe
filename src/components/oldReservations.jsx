@@ -3,15 +3,18 @@ import { useNavigate } from "react-router-dom";
 import {
   getFirestore,
   collection,
+  query,
+  where,
+  orderBy,
   getDocs,
   deleteDoc,
   doc,
 } from "firebase/firestore";
-import { ArrowLeft, Edit, Trash, Plus, Download } from "lucide-react";
+import { ArrowLeft, Trash, Download } from "lucide-react";
 import * as XLSX from "xlsx";
 import * as htmlToImage from "html-to-image";
 
-const ReservationManagement = () => {
+const OldReservationManagement = () => {
   const navigate = useNavigate();
   const [reservations, setReservations] = useState([]);
   const [filterName, setFilterName] = useState("");
@@ -27,41 +30,41 @@ const ReservationManagement = () => {
     return `${parts[2]}/${parts[1]}/${parts[0]}`;
   };
 
-  // Function to fetch reservations from Firestore
-  const fetchReservations = async () => {
+  // Fetch only reservations whose "date" is less than today's date (YYYY-MM-DD string)
+  const fetchOldReservations = async () => {
     try {
-      const querySnapshot = await getDocs(collection(db, "reservations"));
+      const todayString = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+      const oldReservationsQuery = query(
+        collection(db, "reservations"),
+        where("date", "<", todayString),
+        orderBy("date", "desc")
+      );
+
+      const querySnapshot = await getDocs(oldReservationsQuery);
       const reservationsData = [];
       querySnapshot.forEach((docSnapshot) => {
         reservationsData.push({ id: docSnapshot.id, ...docSnapshot.data() });
       });
       setReservations(reservationsData);
     } catch (error) {
-      console.error("Error fetching reservations: ", error);
+      console.error("Error fetching old reservations: ", error);
     }
   };
 
   useEffect(() => {
-    fetchReservations();
-  }, [db]);
-
-  const handleAddReservation = () => {
-    navigate("/add-reservation");
-  };
-
-  const handleEditReservation = (reservationId) => {
-    navigate(`/edit-reservation/${reservationId}`);
-  };
+    fetchOldReservations();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleDeleteReservation = async (reservationId) => {
-    if (window.confirm("هل أنت متأكد من حذف هذا الحجز؟")) {
+    if (window.confirm("هل أنت متأكد من حذف هذا الحجز القديم؟")) {
       try {
         await deleteDoc(doc(db, "reservations", reservationId));
         setReservations((prev) =>
           prev.filter((reservation) => reservation.id !== reservationId)
         );
       } catch (error) {
-        console.error("Error deleting reservation: ", error);
+        console.error("Error deleting old reservation: ", error);
       }
     }
   };
@@ -70,7 +73,7 @@ const ReservationManagement = () => {
     navigate("/managerPage");
   };
 
-  // Apply filters on reservations data
+  // Filter the fetched reservations by name and date
   const filteredReservations = reservations.filter((reservation) => {
     const matchesName = reservation.customerName
       ?.toLowerCase()
@@ -83,11 +86,11 @@ const ReservationManagement = () => {
   const exportToExcel = () => {
     const ws = XLSX.utils.json_to_sheet(filteredReservations);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Reservations");
-    XLSX.writeFile(wb, "reservations.xlsx");
+    XLSX.utils.book_append_sheet(wb, ws, "OldReservations");
+    XLSX.writeFile(wb, "oldReservations.xlsx");
   };
 
-  // Function to download table as image
+  // Download table as image
   const downloadTableAsImage = async () => {
     if (tableRef.current) {
       try {
@@ -96,7 +99,7 @@ const ReservationManagement = () => {
           backgroundColor: "white",
         });
         const link = document.createElement("a");
-        link.download = "reservations-table.png";
+        link.download = "oldReservations-table.png";
         link.href = dataUrl;
         link.click();
       } catch (error) {
@@ -113,7 +116,7 @@ const ReservationManagement = () => {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header Row */}
         <div className="flex items-center justify-between mb-6">
-          {/* Back Button (Left) */}
+          {/* Back Button */}
           <button
             onClick={handleBack}
             className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-pink-600 bg-pink-100 hover:bg-pink-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500"
@@ -124,20 +127,28 @@ const ReservationManagement = () => {
 
           {/* Centered Heading */}
           <h2 className="flex-1 text-center text-xl font-semibold text-gray-900">
-            قائمة الحجوزات
+            قائمة الحجوزات القديمة
           </h2>
 
-          {/* Add Reservation Button (Right) */}
-          <button
-            onClick={handleAddReservation}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-pink-600 hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500"
-          >
-            <Plus className="h-4 w-4 ml-2" />
-            إضافة حجز
-          </button>
+          {/* Export Buttons */}
+          <div className="flex space-x-2">
+            <button
+              onClick={exportToExcel}
+              className="px-4 py-2 bg-pink-600 text-white rounded-md hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500"
+            >
+              تصدير إلى Excel
+            </button>
+            <button
+              onClick={downloadTableAsImage}
+              className="px-4 py-2 bg-pink-600 text-white rounded-md hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500 flex items-center"
+            >
+              <Download className="h-4 w-4 ml-2" />
+              تحميل كصورة
+            </button>
+          </div>
         </div>
 
-        {/* Filters and Export */}
+        {/* Filters */}
         <div className="mb-6 flex flex-col sm:flex-row sm:space-x-4">
           <input
             type="text"
@@ -153,34 +164,19 @@ const ReservationManagement = () => {
             onChange={(e) => setFilterDate(e.target.value)}
             className="px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
           />
-          <div className="flex gap-2">
-            <button
-              onClick={exportToExcel}
-              className="mt-2 sm:mt-0 px-4 py-2 bg-pink-600 text-white rounded-md hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500"
-            >
-              تصدير إلى Excel
-            </button>
-            <button
-              onClick={downloadTableAsImage}
-              className="mt-2 sm:mt-0 px-4 py-2 bg-pink-600 text-white rounded-md hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500 flex items-center"
-            >
-              <Download className="h-4 w-4 ml-2" />
-              تحميل كصورة
-            </button>
-          </div>
         </div>
 
         {/* Display reservation count */}
         <div className="mb-4 text-right">
           <p className="text-gray-700 font-bold">
-            عدد الحجوزات: {filteredReservations.length}
+            عدد الحجوزات القديمة: {filteredReservations.length}
           </p>
         </div>
 
         {/* Reservations Table */}
         <div className="overflow-x-auto">
           {filteredReservations.length === 0 ? (
-            <p className="text-center text-gray-600">لا توجد مواعيد متاحة</p>
+            <p className="text-center text-gray-600">لا توجد حجوزات قديمة</p>
           ) : (
             <table
               ref={tableRef}
@@ -202,9 +198,6 @@ const ReservationManagement = () => {
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     حالة الحجز
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    تعديل
                   </th>
                   <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                     حذف
@@ -231,14 +224,6 @@ const ReservationManagement = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
                       <button
-                        onClick={() => handleEditReservation(reservation.id)}
-                        className="text-pink-600 hover:text-pink-900"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center text-sm font-medium">
-                      <button
                         onClick={() => handleDeleteReservation(reservation.id)}
                         className="text-pink-600 hover:text-pink-900"
                       >
@@ -256,4 +241,4 @@ const ReservationManagement = () => {
   );
 };
 
-export default ReservationManagement;
+export default OldReservationManagement;

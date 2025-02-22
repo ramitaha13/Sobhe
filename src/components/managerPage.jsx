@@ -14,10 +14,9 @@ import {
   getFirestore,
   collection,
   query,
-  where,
-  onSnapshot,
   orderBy,
   limit,
+  onSnapshot,
   doc,
   updateDoc,
 } from "firebase/firestore";
@@ -95,7 +94,7 @@ const ManagerPage = () => {
       unsubscribe();
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, [previousCount]);
+  }, [previousCount, db]);
 
   const handleLogout = () => {
     localStorage.removeItem("user");
@@ -146,6 +145,12 @@ const ManagerPage = () => {
       icon: <Video className="h-8 w-8 text-pink-600" />,
       onClick: () => navigate("/reservation"),
       description: "إدارة حجوزات العملاء",
+    },
+    {
+      title: "الحجوزات القديمة",
+      icon: <Video className="h-8 w-8 text-pink-600" />,
+      onClick: () => navigate("/oldReservations"),
+      description: "عرض الحجوزات القديمة",
     },
     {
       title: "تواصل مع الزبون",
