@@ -27,15 +27,17 @@ const BookAppointmentButton = () => {
 
     setIsSubmitting(true);
 
-    // Format the date to dd/mm/yyyy using locale "en-GB"
-    const formattedDate = selectedDate
-      ? selectedDate.toLocaleDateString("en-GB")
-      : "";
+    // For display, the DatePicker shows dd/mm/yyyy.
+    // Here, we format the date to "yyyy-mm-dd" for saving to Firebase.
+    const year = selectedDate.getFullYear();
+    const month = String(selectedDate.getMonth() + 1).padStart(2, "0");
+    const day = String(selectedDate.getDate()).padStart(2, "0");
+    const firebaseDate = `${year}-${month}-${day}`; // "yyyy-mm-dd"
 
     const appointmentData = {
       customerName,
       regon,
-      date: formattedDate,
+      date: firebaseDate,
       phone,
       createdAt: new Date(),
     };
@@ -47,7 +49,7 @@ const BookAppointmentButton = () => {
           ...appointmentData,
           type: "appointment",
           read: false,
-          message: `موعد جديد: ${customerName} - ${formattedDate}`,
+          message: `موعد جديد: ${customerName} - ${firebaseDate}`,
         }),
       ]);
 
