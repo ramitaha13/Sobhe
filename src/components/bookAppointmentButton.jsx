@@ -19,6 +19,12 @@ const BookAppointmentButton = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Check if all fields are filled before submitting
+    if (!customerName || !regon || !selectedDate || !phone) {
+      return;
+    }
+
     setIsSubmitting(true);
 
     // Format the date to dd/mm/yyyy using locale "en-GB"
@@ -58,6 +64,9 @@ const BookAppointmentButton = () => {
   const handleBack = () => {
     navigate(-1);
   };
+
+  // Determine if any field is empty
+  const isFormIncomplete = !customerName || !regon || !selectedDate || !phone;
 
   return (
     <div
@@ -124,13 +133,13 @@ const BookAppointmentButton = () => {
             />
           </div>
 
-          {/* Date Field with enhanced calendar options */}
+          {/* Date Field with instruction */}
           <div className="mb-4">
             <label
               htmlFor="date"
               className="block text-gray-700 text-sm font-bold mb-2"
             >
-              تاريخ الموعد
+              تاريخ الموعد (اكتب التاريخ بالشكل dd/mm/yyyy أو اختر من التقويم)
             </label>
             <DatePicker
               id="date"
@@ -139,12 +148,15 @@ const BookAppointmentButton = () => {
               dateFormat="dd/MM/yyyy"
               placeholderText="dd/mm/yyyy"
               className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
-              required
+              // Prevent choosing a past date by setting the minimum date to today
+              minDate={new Date()}
               showMonthDropdown
               showYearDropdown
               dropdownMode="select"
-              minDate={new Date(2020, 0, 1)}
             />
+            <p className="mt-1 text-xs text-gray-500">
+              اكتب التاريخ في هذا الإطار بالشكل dd/mm/yyyy
+            </p>
           </div>
 
           {/* Phone Number Field */}
@@ -159,9 +171,16 @@ const BookAppointmentButton = () => {
               id="phone"
               type="tel"
               value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              onChange={(e) => {
+                const newValue = e.target.value;
+                // Only allow numeric characters
+                if (/^\d*$/.test(newValue)) {
+                  setPhone(newValue);
+                }
+              }}
               placeholder="أدخل رقم الهاتف"
               className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
+              inputMode="numeric"
               required
             />
           </div>
@@ -172,9 +191,9 @@ const BookAppointmentButton = () => {
 
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || isFormIncomplete}
             className={`w-full inline-flex items-center justify-center px-4 py-2 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500 ${
-              isSubmitting
+              isSubmitting || isFormIncomplete
                 ? "bg-pink-400 cursor-not-allowed"
                 : "bg-pink-600 hover:bg-pink-700"
             }`}
