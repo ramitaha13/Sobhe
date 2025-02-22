@@ -175,7 +175,7 @@ const BookAppointmentButton = () => {
               value={phone}
               onChange={(e) => {
                 const newValue = e.target.value;
-                // Only allow numeric characters
+                // Allow only numeric characters (0-9)
                 if (/^\d*$/.test(newValue)) {
                   setPhone(newValue);
                 }
@@ -183,6 +183,7 @@ const BookAppointmentButton = () => {
               placeholder="أدخل رقم الهاتف"
               className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
               inputMode="numeric"
+              pattern="[0-9]*"
               required
             />
           </div>
