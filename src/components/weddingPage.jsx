@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Heart,
   Camera,
@@ -13,12 +13,11 @@ import {
   User,
   Share2,
   Sparkles,
-  Play,
   Maximize,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { SiTiktok } from "react-icons/si";
 import { FaWhatsapp } from "react-icons/fa";
+import { useNavigate } from "react-router-dom";
 import { getFirestore, collection, getDocs } from "firebase/firestore";
 import video1 from "/src/assets/1.mp4";
 import video2 from "/src/assets/2.mp4";
@@ -30,8 +29,8 @@ const WeddingPage = () => {
   const [playing1, setPlaying1] = useState(false);
   const [playing2, setPlaying2] = useState(false);
 
-  const videoRef1 = React.useRef(null);
-  const videoRef2 = React.useRef(null);
+  const videoRef1 = useRef(null);
+  const videoRef2 = useRef(null);
 
   const handleVideoPlay = (videoRef, setPlaying) => {
     if (videoRef.current.paused) {
@@ -43,11 +42,9 @@ const WeddingPage = () => {
     }
   };
 
-  // Attempt both the standard Fullscreen API and the iOS Safari fallback
   const handleToggleFullscreen = (videoRef) => {
     const video = videoRef.current;
     if (!video) return;
-
     if (video.requestFullscreen) {
       if (!document.fullscreenElement) {
         video.requestFullscreen();
@@ -82,7 +79,6 @@ const WeddingPage = () => {
           prevIndex === profileImages.length - 1 ? 0 : prevIndex + 1
         );
       }, 3000);
-
       return () => clearInterval(interval);
     }
   }, [profileImages]);
@@ -107,7 +103,9 @@ const WeddingPage = () => {
           text: "احجز فرحك معنا",
           url: window.location.href,
         });
-      } catch (error) {}
+      } catch (error) {
+        // User cancelled or share not supported
+      }
     } else {
       alert("نسخ الرابط: " + window.location.href);
     }
@@ -209,7 +207,7 @@ const WeddingPage = () => {
           </div>
           <div className="relative">
             <div
-              onClick={() => navigate("/showImages")}
+              onClick={handlePhotoClick}
               className="bg-gradient-to-br from-rose-50 to-pink-50 rounded-3xl p-12 hover:shadow-2xl transition-all duration-300 cursor-pointer transform hover:scale-105 border border-rose-100"
             >
               <div className="flex flex-col items-center justify-center">
@@ -242,82 +240,86 @@ const WeddingPage = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             {/* First Video */}
-            <div className="group relative bg-black/5 rounded-2xl overflow-hidden">
-              <video
-                ref={videoRef1}
-                className="w-full aspect-video object-contain cursor-pointer"
-                onContextMenu={(e) => e.preventDefault()}
-                controlsList="nodownload"
-                playsInline
-                loop
-              >
-                <source src={video1} type="video/mp4" />
-              </video>
-
-              {/* Custom Play Button Overlay */}
-              <div
-                className={`absolute inset-0 bg-black/30 flex items-center justify-center transition-opacity duration-300 ${
-                  playing1 ? "opacity-0" : "opacity-100"
-                } group-hover:opacity-100`}
-                onClick={() => handleVideoPlay(videoRef1, setPlaying1)}
-              >
-                <div className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center transform transition-transform duration-300 group-hover:scale-110">
-                  {playing1 ? (
-                    <div className="w-4 h-8 bg-rose-500 mx-1" />
-                  ) : (
-                    <div className="w-0 h-0 border-t-[12px] border-t-transparent border-l-[20px] border-l-rose-500 border-b-[12px] border-b-transparent ml-1" />
-                  )}
-                </div>
-              </div>
-
-              {/* Fullscreen Toggle Button */}
-              <div className="absolute bottom-4 right-4">
-                <button
-                  onClick={() => handleToggleFullscreen(videoRef1)}
-                  className="bg-white/70 p-2 rounded-full shadow hover:bg-white"
+            <div className="group relative rounded-2xl overflow-hidden bg-black/5">
+              <div className="relative">
+                <video
+                  ref={videoRef1}
+                  className="w-full h-auto object-contain cursor-pointer"
+                  onContextMenu={(e) => e.preventDefault()}
+                  controlsList="nodownload"
+                  playsInline
+                  loop
                 >
-                  <Maximize className="h-5 w-5 text-rose-500" />
-                </button>
+                  <source src={video1} type="video/mp4" />
+                </video>
+
+                {/* Custom Play Button Overlay */}
+                <div
+                  className={`absolute inset-0 bg-black/30 flex items-center justify-center transition-opacity duration-300 ${
+                    playing1 ? "opacity-0" : "opacity-100"
+                  } group-hover:opacity-100`}
+                  onClick={() => handleVideoPlay(videoRef1, setPlaying1)}
+                >
+                  <div className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center transform transition-transform duration-300 group-hover:scale-110">
+                    {playing1 ? (
+                      <div className="w-4 h-8 bg-rose-500 mx-1" />
+                    ) : (
+                      <div className="w-0 h-0 border-t-[12px] border-t-transparent border-l-[20px] border-l-rose-500 border-b-[12px] border-b-transparent ml-1" />
+                    )}
+                  </div>
+                </div>
+
+                {/* Fullscreen Toggle Button */}
+                <div className="absolute bottom-4 right-4">
+                  <button
+                    onClick={() => handleToggleFullscreen(videoRef1)}
+                    className="bg-white/70 p-2 rounded-full shadow hover:bg-white"
+                  >
+                    <Maximize className="h-5 w-5 text-rose-500" />
+                  </button>
+                </div>
               </div>
             </div>
 
             {/* Second Video */}
-            <div className="group relative bg-black/5 rounded-2xl overflow-hidden">
-              <video
-                ref={videoRef2}
-                className="w-full aspect-video object-contain cursor-pointer"
-                onContextMenu={(e) => e.preventDefault()}
-                controlsList="nodownload"
-                playsInline
-                loop
-              >
-                <source src={video2} type="video/mp4" />
-              </video>
-
-              {/* Custom Play Button Overlay */}
-              <div
-                className={`absolute inset-0 bg-black/30 flex items-center justify-center transition-opacity duration-300 ${
-                  playing2 ? "opacity-0" : "opacity-100"
-                } group-hover:opacity-100`}
-                onClick={() => handleVideoPlay(videoRef2, setPlaying2)}
-              >
-                <div className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center transform transition-transform duration-300 group-hover:scale-110">
-                  {playing2 ? (
-                    <div className="w-4 h-8 bg-rose-500 mx-1" />
-                  ) : (
-                    <div className="w-0 h-0 border-t-[12px] border-t-transparent border-l-[20px] border-l-rose-500 border-b-[12px] border-b-transparent ml-1" />
-                  )}
-                </div>
-              </div>
-
-              {/* Fullscreen Toggle Button */}
-              <div className="absolute bottom-4 right-4">
-                <button
-                  onClick={() => handleToggleFullscreen(videoRef2)}
-                  className="bg-white/70 p-2 rounded-full shadow hover:bg-white"
+            <div className="group relative rounded-2xl overflow-hidden bg-black/5">
+              <div className="relative">
+                <video
+                  ref={videoRef2}
+                  className="w-full h-auto object-contain cursor-pointer"
+                  onContextMenu={(e) => e.preventDefault()}
+                  controlsList="nodownload"
+                  playsInline
+                  loop
                 >
-                  <Maximize className="h-5 w-5 text-rose-500" />
-                </button>
+                  <source src={video2} type="video/mp4" />
+                </video>
+
+                {/* Custom Play Button Overlay */}
+                <div
+                  className={`absolute inset-0 bg-black/30 flex items-center justify-center transition-opacity duration-300 ${
+                    playing2 ? "opacity-0" : "opacity-100"
+                  } group-hover:opacity-100`}
+                  onClick={() => handleVideoPlay(videoRef2, setPlaying2)}
+                >
+                  <div className="w-16 h-16 bg-white/90 rounded-full flex items-center justify-center transform transition-transform duration-300 group-hover:scale-110">
+                    {playing2 ? (
+                      <div className="w-4 h-8 bg-rose-500 mx-1" />
+                    ) : (
+                      <div className="w-0 h-0 border-t-[12px] border-t-transparent border-l-[20px] border-l-rose-500 border-b-[12px] border-b-transparent ml-1" />
+                    )}
+                  </div>
+                </div>
+
+                {/* Fullscreen Toggle Button */}
+                <div className="absolute bottom-4 right-4">
+                  <button
+                    onClick={() => handleToggleFullscreen(videoRef2)}
+                    className="bg-white/70 p-2 rounded-full shadow hover:bg-white"
+                  >
+                    <Maximize className="h-5 w-5 text-rose-500" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
