@@ -9,7 +9,6 @@ const BookAppointmentButton = () => {
   const navigate = useNavigate();
   const [customerName, setCustomerName] = useState("");
   const [regon, setRegon] = useState("");
-  // Use a Date object for the selected date
   const [selectedDate, setSelectedDate] = useState(null);
   const [phone, setPhone] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -125,7 +124,7 @@ const BookAppointmentButton = () => {
             />
           </div>
 
-          {/* Date Field with react-datepicker */}
+          {/* Date Field with enhanced calendar options */}
           <div className="mb-4">
             <label
               htmlFor="date"
@@ -141,6 +140,10 @@ const BookAppointmentButton = () => {
               placeholderText="dd/mm/yyyy"
               className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
               required
+              showMonthDropdown
+              showYearDropdown
+              dropdownMode="select"
+              minDate={new Date(2020, 0, 1)}
             />
           </div>
 
