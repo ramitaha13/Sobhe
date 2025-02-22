@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Save } from "lucide-react";
 import { getFirestore, collection, addDoc } from "firebase/firestore";
@@ -7,7 +9,8 @@ const BookAppointmentButton = () => {
   const navigate = useNavigate();
   const [customerName, setCustomerName] = useState("");
   const [regon, setRegon] = useState("");
-  const [date, setDate] = useState("");
+  // Use a Date object for the selected date
+  const [selectedDate, setSelectedDate] = useState(null);
   const [phone, setPhone] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
@@ -19,31 +22,31 @@ const BookAppointmentButton = () => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Prepare appointment data
+    // Format the date to dd/mm/yyyy using locale "en-GB"
+    const formattedDate = selectedDate
+      ? selectedDate.toLocaleDateString("en-GB")
+      : "";
+
     const appointmentData = {
       customerName,
       regon,
-      date,
+      date: formattedDate,
       phone,
-      createdAt: new Date(), // Add timestamp for notifications
+      createdAt: new Date(),
     };
 
     try {
-      // Save to both collections in parallel
       await Promise.all([
-        // Save to schedule collection
         addDoc(collection(db, "schedule"), appointmentData),
-        // Save to notifications collection
         addDoc(collection(db, "notifications"), {
           ...appointmentData,
           type: "appointment",
           read: false,
-          message: `موعد جديد: ${customerName} - ${date}`,
+          message: `موعد جديد: ${customerName} - ${formattedDate}`,
         }),
       ]);
 
       setSuccessMessage("تم حفظ الموعد بنجاح");
-      // After 2 seconds, navigate to the schedule page
       setTimeout(() => {
         navigate("/schedule");
       }, 2000);
@@ -122,7 +125,7 @@ const BookAppointmentButton = () => {
             />
           </div>
 
-          {/* Date Field */}
+          {/* Date Field with react-datepicker */}
           <div className="mb-4">
             <label
               htmlFor="date"
@@ -130,11 +133,12 @@ const BookAppointmentButton = () => {
             >
               تاريخ الموعد
             </label>
-            <input
+            <DatePicker
               id="date"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
+              selected={selectedDate}
+              onChange={(date) => setSelectedDate(date)}
+              dateFormat="dd/MM/yyyy"
+              placeholderText="dd/mm/yyyy"
               className="w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500"
               required
             />
