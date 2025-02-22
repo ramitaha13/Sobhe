@@ -161,6 +161,13 @@ const ShowAppointments = () => {
           </button>
         </div>
 
+        {/* Display number of rows */}
+        <div className="mb-4 text-right">
+          <p className="text-gray-700 font-bold">
+            عدد الصفوف: {filteredAppointments.length}
+          </p>
+        </div>
+
         {filteredAppointments.length === 0 ? (
           <p className="text-center text-gray-600">لا توجد مواعيد متاحة</p>
         ) : (
