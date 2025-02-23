@@ -92,7 +92,7 @@ const FeedbackList = () => {
         </button>
       </div>
       <h1 className="text-2xl sm:text-3xl font-bold text-center mb-6 sm:mb-8">
-        عرض ملاحظات العملاء
+        عرض ملاحظات
       </h1>
 
       <div className="max-w-4xl mx-auto">
