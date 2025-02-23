@@ -8,6 +8,7 @@ import {
   deleteDoc,
   query,
   where,
+  addDoc,
 } from "firebase/firestore";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import * as XLSX from "xlsx";
@@ -48,10 +49,7 @@ const ShowAppointments = () => {
   const handleDelete = async (appointmentId, appointmentData) => {
     if (window.confirm("هل أنت متأكد أنك تريد حذف هذا الموعد؟")) {
       try {
-        // Delete from schedule collection
         await deleteDoc(doc(db, "schedule", appointmentId));
-
-        // Find and delete associated notification
         const notificationsRef = collection(db, "notifications");
         const notificationsQuery = query(
           notificationsRef,
@@ -60,15 +58,11 @@ const ShowAppointments = () => {
         );
 
         const notificationsSnapshot = await getDocs(notificationsQuery);
-
-        // Delete all matching notifications
         const deletePromises = notificationsSnapshot.docs.map((doc) =>
           deleteDoc(doc.ref)
         );
 
         await Promise.all(deletePromises);
-
-        // Update local state
         setAppointments((prev) =>
           prev.filter((appt) => appt.id !== appointmentId)
         );
@@ -79,7 +73,51 @@ const ShowAppointments = () => {
     }
   };
 
-  // Filter appointments based on customer name and appointment date
+  const handleBookNow = async (appointment) => {
+    if (window.confirm("هل أنت متأكد أنك تريد تأكيد هذا الحجز؟")) {
+      try {
+        // First, add to reservations
+        const reservationData = {
+          customerName: appointment.customerName,
+          date: appointment.date,
+          phone: appointment.phone,
+          regon: appointment.regon,
+          status: "تم التأكيد",
+        };
+
+        const reservationsRef = collection(db, "reservations");
+        await addDoc(reservationsRef, reservationData);
+
+        // Then delete from schedule
+        await deleteDoc(doc(db, "schedule", appointment.id));
+
+        // Delete associated notifications
+        const notificationsRef = collection(db, "notifications");
+        const notificationsQuery = query(
+          notificationsRef,
+          where("customerName", "==", appointment.customerName),
+          where("date", "==", appointment.date)
+        );
+
+        const notificationsSnapshot = await getDocs(notificationsQuery);
+        const deletePromises = notificationsSnapshot.docs.map((doc) =>
+          deleteDoc(doc.ref)
+        );
+        await Promise.all(deletePromises);
+
+        // Update local state to remove the booked appointment
+        setAppointments((prev) =>
+          prev.filter((appt) => appt.id !== appointment.id)
+        );
+
+        alert("تم الحجز بنجاح");
+      } catch (err) {
+        console.error("Error processing reservation:", err);
+        alert("حدث خطأ أثناء الحجز");
+      }
+    }
+  };
+
   const filteredAppointments = appointments.filter((appt) => {
     const matchesName = appt.customerName
       ?.toLowerCase()
@@ -88,7 +126,6 @@ const ShowAppointments = () => {
     return matchesName && matchesDate;
   });
 
-  // Export the filtered appointments to an Excel file
   const exportToExcel = () => {
     const ws = XLSX.utils.json_to_sheet(filteredAppointments);
     const wb = XLSX.utils.book_new();
@@ -124,7 +161,6 @@ const ShowAppointments = () => {
       dir="rtl"
     >
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Back Button */}
         <button
           onClick={handleBack}
           className="inline-flex items-center px-4 py-2 text-sm font-medium rounded-md text-pink-600 bg-pink-100 hover:bg-pink-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500 mb-6"
@@ -137,7 +173,6 @@ const ShowAppointments = () => {
           قائمة المواعيد
         </h2>
 
-        {/* Filters */}
         <div className="mb-6 flex flex-col sm:flex-row sm:space-x-4">
           <input
             type="text"
@@ -161,7 +196,6 @@ const ShowAppointments = () => {
           </button>
         </div>
 
-        {/* Display number of rows */}
         <div className="mb-4 text-right">
           <p className="text-gray-700 font-bold">
             عدد الصفوف: {filteredAppointments.length}
@@ -188,6 +222,9 @@ const ShowAppointments = () => {
                     رقم الهاتف
                   </th>
                   <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    حجز
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     حذف
                   </th>
                 </tr>
@@ -206,6 +243,14 @@ const ShowAppointments = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {appt.phone}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button
+                        onClick={() => handleBookNow(appt)}
+                        className="text-white bg-pink-600 hover:bg-pink-700 px-4 py-2 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500"
+                      >
+                        احجز الان
+                      </button>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button
