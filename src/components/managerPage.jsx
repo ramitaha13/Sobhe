@@ -170,6 +170,12 @@ const ManagerPage = () => {
       onClick: () => navigate("/profileImages"),
       description: "إدارة صور الملف الشخصي",
     },
+    {
+      title: "ملاحظات الزبون",
+      icon: <MessageSquare className="h-8 w-8 text-pink-600" />,
+      onClick: () => navigate("/feedbackList"),
+      description: "عرض ملاحظات العملاء",
+    },
   ];
 
   return (
@@ -201,21 +207,13 @@ const ManagerPage = () => {
                   )}
                 </button>
 
-                {/* Mobile-friendly Notifications Dropdown */}
+                {/* Notifications Dropdown */}
                 {isNotificationsOpen && (
                   <div className="fixed inset-x-0 top-16 mx-auto sm:absolute sm:inset-auto sm:left-0 sm:mt-2 w-full sm:w-96 bg-white shadow-lg z-50 sm:rounded-md max-h-[80vh] sm:max-h-96 overflow-hidden">
                     <div className="p-4">
-                      <div className="flex justify-between items-center mb-4">
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          الإشعارات
-                        </h3>
-                        <button
-                          onClick={() => setIsNotificationsOpen(false)}
-                          className="text-gray-400 hover:text-gray-500"
-                        >
-                          <X className="h-5 w-5" />
-                        </button>
-                      </div>
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        الإشعارات
+                      </h3>
                       <div className="space-y-4 overflow-y-auto max-h-[calc(80vh-8rem)] sm:max-h-72">
                         {notifications.length > 0 ? (
                           notifications.map((notification) => (
@@ -229,19 +227,12 @@ const ManagerPage = () => {
                                 markAsRead(notification.id)
                               }
                             >
-                              <div className="flex justify-between items-start">
-                                <div className="flex-1">
-                                  <p className="text-sm text-gray-900">
-                                    {notification.message}
-                                  </p>
-                                  <p className="text-xs text-gray-500 mt-1">
-                                    {formatDate(notification.createdAt)}
-                                  </p>
-                                </div>
-                                {!notification.read && (
-                                  <span className="w-2 h-2 bg-pink-600 rounded-full"></span>
-                                )}
-                              </div>
+                              <p className="text-sm text-gray-900">
+                                {notification.message}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {formatDate(notification.createdAt)}
+                              </p>
                             </div>
                           ))
                         ) : (
@@ -254,16 +245,15 @@ const ManagerPage = () => {
                   </div>
                 )}
               </div>
-              <span className="text-gray-700 mx-2 sm:mx-4 text-sm sm:text-base">
+              <span className="text-gray-700 mx-2 sm:mx-4">
                 مرحباً، {user.username}
               </span>
               <button
                 onClick={handleLogout}
-                className="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-transparent text-sm font-medium rounded-md text-white bg-pink-600 hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-pink-500"
+                className="bg-pink-600 text-white rounded-md px-4 py-2 flex items-center gap-2"
               >
-                <LogOut className="h-4 w-4 ml-1 sm:ml-2" />
-                <span className="hidden sm:inline">تسجيل الخروج</span>
-                <span className="sm:hidden">خروج</span>
+                <span>تسجيل الخروج</span>
+                <LogOut className="h-5 w-5" />
               </button>
             </div>
           </div>

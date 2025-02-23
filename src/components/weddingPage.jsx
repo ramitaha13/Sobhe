@@ -10,6 +10,7 @@ import {
   Phone,
   User,
   Instagram,
+  MessageCircle,
 } from "lucide-react";
 import { SiTiktok } from "react-icons/si";
 import { FaWhatsapp } from "react-icons/fa";
@@ -93,6 +94,10 @@ const WeddingPage = () => {
     navigate("/bookAppointmentButton");
   };
 
+  const handleFeedback = () => {
+    navigate("/feedbackFrames");
+  };
+
   const handleShare = async () => {
     if (navigator.share) {
       try {
@@ -144,7 +149,7 @@ const WeddingPage = () => {
         </div>
       </div>
 
-      {/* Hero Section - Updated to 60vh */}
+      {/* Hero Section */}
       <div className="relative h-[70vh] w-full flex items-center">
         {/* Background Slider */}
         <div className="absolute inset-0 overflow-hidden">
@@ -189,6 +194,27 @@ const WeddingPage = () => {
                 <Calendar className="ml-3 h-6 w-6" />
               </button>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Feedback Section */}
+      <div className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-8">
+            <h2 className="text-4xl font-extrabold bg-gradient-to-r from-rose-500 to-pink-600 bg-clip-text text-transparent">
+              حابب تسمع شو بقولو عنا
+            </h2>
+          </div>
+          <div className="flex justify-center">
+            <button
+              onClick={handleFeedback}
+              className="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-medium text-white bg-gradient-to-r from-rose-500 to-pink-600 rounded-full overflow-hidden transform hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl"
+            >
+              <MessageCircle className="h-6 w-6 ml-2" />
+              فوت اسمع
+              <div className="absolute inset-0 bg-white/20 transform -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+            </button>
           </div>
         </div>
       </div>

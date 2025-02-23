@@ -17,6 +17,9 @@ import ContactCustomer from "./components/contactCustomer.jsx";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import ProfileImages from "./components/profileImages.jsx";
 import OldReservations from "./components/oldReservations.jsx";
+import Feedback from "./components/feedback.jsx";
+import FeedbackList from "./components/feedbackList.jsx";
+import FeedbackFrames from "./components/feedbackFrames.jsx";
 
 const router = createBrowserRouter([
   {
@@ -118,6 +121,22 @@ const router = createBrowserRouter([
         <OldReservations />
       </ProtectedRoute>
     ),
+  },
+  {
+    path: "/feedback",
+    element: <Feedback />,
+  },
+  {
+    path: "/feedbackList",
+    element: (
+      <ProtectedRoute>
+        <FeedbackList />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/feedbackFrames",
+    element: <FeedbackFrames />,
   },
 ]);
 
