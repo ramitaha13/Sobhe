@@ -21,8 +21,6 @@ import Feedback from "./components/feedback.jsx";
 import FeedbackList from "./components/feedbackList.jsx";
 import FeedbackFrames from "./components/feedbackFrames.jsx";
 import WeekBeforeToday from "./components/weekBeforeToday.jsx";
-import ItemList from "./components/ItemList.jsx";
-import VideoDisplay from "./components/VideoDisplay.jsx";
 
 const router = createBrowserRouter([
   {
@@ -148,14 +146,6 @@ const router = createBrowserRouter([
   {
     path: "/feedbackFrames",
     element: <FeedbackFrames />,
-  },
-  {
-    path: "/ItemList",
-    element: <ItemList />,
-  },
-  {
-    path: "/VideoDisplay",
-    element: <VideoDisplay />,
   },
 ]);
 
