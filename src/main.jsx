@@ -20,6 +20,7 @@ import OldReservations from "./components/oldReservations.jsx";
 import Feedback from "./components/feedback.jsx";
 import FeedbackList from "./components/feedbackList.jsx";
 import FeedbackFrames from "./components/feedbackFrames.jsx";
+import WeekBeforeToday from "./components/weekBeforeToday.jsx";
 
 const router = createBrowserRouter([
   {
@@ -131,6 +132,14 @@ const router = createBrowserRouter([
     element: (
       <ProtectedRoute>
         <FeedbackList />
+      </ProtectedRoute>
+    ),
+  },
+  {
+    path: "/weekBeforeToday",
+    element: (
+      <ProtectedRoute>
+        <WeekBeforeToday />
       </ProtectedRoute>
     ),
   },

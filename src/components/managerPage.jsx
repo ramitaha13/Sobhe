@@ -127,6 +127,7 @@ const ManagerPage = () => {
     return `${day}/${month}/${year} ${hours}:${minutes}`;
   };
 
+  // Added new menu item for reservations from week before today
   const menuItems = [
     {
       title: "إدارة الصور",
@@ -151,6 +152,12 @@ const ManagerPage = () => {
       icon: <Video className="h-8 w-8 text-pink-600" />,
       onClick: () => navigate("/oldReservations"),
       description: "عرض الحجوزات القديمة",
+    },
+    {
+      title: "حجوزات الأسبوع القادم",
+      icon: <Video className="h-8 w-8 text-pink-600" />,
+      onClick: () => navigate("/weekBeforeToday"),
+      description: "عرض الحجوزات أسبوع بعد اليوم",
     },
     {
       title: "تواصل مع الزبون",
