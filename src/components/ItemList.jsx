@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 // API base URL for both development and production
 // In development, use localhost
 // For production, replace with your actual backend URL before deploying
-const API_BASE_URL = "http://localhost:8080";
+const API_BASE_URL = "https://sobhe.vercel.app";
 // For production use: const API_BASE_URL = "https://your-backend-api-url.com";
 
 function ItemList() {

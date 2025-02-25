@@ -15,7 +15,7 @@ function VideoDisplay() {
   useEffect(() => {
     const fetchVideos = async () => {
       try {
-        const response = await axios.get("http://localhost:8080/api/items");
+        const response = await axios.get("https://sobhe.vercel.app/api/items");
         // Filter only items that have videoUrl
         const videoItems = response.data.filter((item) => item.videoUrl);
         setVideos(videoItems);
@@ -326,7 +326,7 @@ function VideoDisplay() {
               <video
                 controls
                 style={styles.video}
-                src={`http://localhost:8080${selectedVideo.videoUrl}`}
+                src={`https://sobhe.vercel.app${selectedVideo.videoUrl}`}
               >
                 Your browser does not support the video tag.
               </video>
