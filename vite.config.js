@@ -12,18 +12,18 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
   plugins: [react(), , tailwindcss()],
-  server: {
-    proxy: {
-      "/upload": {
-        target: "http://localhost:5001", // Your backend
-        changeOrigin: true,
-        secure: false,
-      },
-      "/uploads": {
-        target: "http://localhost:5001",
-        changeOrigin: true,
-        secure: false,
-      },
-    },
-  },
+  // server: {
+  //   proxy: {
+  //     "/upload": {
+  //       target: "http://localhost:5001", // Your backend
+  //       changeOrigin: true,
+  //       secure: false,
+  //     },
+  //     "/uploads": {
+  //       target: "http://localhost:5001",
+  //       changeOrigin: true,
+  //       secure: false,
+  //     },
+  //   },
+  // },
 });

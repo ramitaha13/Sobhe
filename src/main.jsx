@@ -21,6 +21,9 @@ import Feedback from "./components/feedback.jsx";
 import FeedbackList from "./components/feedbackList.jsx";
 import FeedbackFrames from "./components/feedbackFrames.jsx";
 import WeekBeforeToday from "./components/weekBeforeToday.jsx";
+import Uploadvideos from "./components/uploadvideos.jsx";
+import VideoGalleryAdmin from "./components/videoGalleryAdmin.jsx";
+import VideoGallery from "./components/videoGallery.jsx";
 
 const router = createBrowserRouter([
   {
@@ -146,6 +149,18 @@ const router = createBrowserRouter([
   {
     path: "/feedbackFrames",
     element: <FeedbackFrames />,
+  },
+  {
+    path: "/uploadvideos",
+    element: <Uploadvideos />,
+  },
+  {
+    path: "/videoGalleryAdmin",
+    element: <VideoGalleryAdmin />,
+  },
+  {
+    path: "/videoGallery",
+    element: <VideoGallery />,
   },
 ]);
 
