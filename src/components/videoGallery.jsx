@@ -20,7 +20,9 @@ const VideoGallery = () => {
   const [isMuted, setIsMuted] = useState(true);
   const [showFullscreen, setShowFullscreen] = useState(false);
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
+  const [thumbnailsReady, setThumbnailsReady] = useState({});
   const videoRefs = useRef({});
+  const fullscreenVideoRefs = useRef({});
   const scrollRef = useRef(null);
   const navigate = useNavigate();
   const observerRef = useRef(null);
@@ -49,6 +51,7 @@ const VideoGallery = () => {
         id: doc.id,
         ...doc.data(),
         isPlaying: false,
+        thumbnailReady: false,
       }));
 
       setVideos(videoList);
@@ -59,6 +62,79 @@ const VideoGallery = () => {
       setLoading(false);
     }
   };
+
+  // Generate thumbnails from videos
+  useEffect(() => {
+    if (videos.length > 0 && !loading) {
+      videos.forEach((video) => {
+        // Skip if thumbnail is already generated
+        if (thumbnailsReady[video.id]) return;
+
+        const videoEl = videoRefs.current[video.id];
+        if (!videoEl) return;
+
+        // When metadata loads, seek to middle of video for better thumbnail
+        const handleMetadataLoaded = () => {
+          if (videoEl.duration) {
+            // Seek to 30% of the video for a representative frame
+            videoEl.currentTime = videoEl.duration * 0.3;
+          }
+        };
+
+        // Mark thumbnail as ready once we've seeked to the right position
+        const handleSeeked = () => {
+          setThumbnailsReady((prev) => ({
+            ...prev,
+            [video.id]: true,
+          }));
+
+          // Clean up listeners
+          videoEl.removeEventListener("loadedmetadata", handleMetadataLoaded);
+          videoEl.removeEventListener("seeked", handleSeeked);
+        };
+
+        if (videoEl.readyState >= 1) {
+          // Video metadata already loaded
+          handleMetadataLoaded();
+
+          // Listen for when seeking is complete
+          videoEl.addEventListener("seeked", handleSeeked, { once: true });
+        } else {
+          // Wait for metadata to load first
+          videoEl.addEventListener("loadedmetadata", handleMetadataLoaded, {
+            once: true,
+          });
+          videoEl.addEventListener("seeked", handleSeeked, { once: true });
+        }
+      });
+    }
+  }, [videos, videoRefs.current, loading]);
+
+  // Effect to update video mute state when isMuted changes
+  useEffect(() => {
+    if (showFullscreen && videos.length > 0) {
+      const activeVideo = videos[activeVideoIndex];
+      if (activeVideo) {
+        const videoEl = fullscreenVideoRefs.current[activeVideo.id];
+        if (videoEl) {
+          videoEl.muted = isMuted;
+        }
+      }
+    }
+  }, [isMuted, activeVideoIndex, showFullscreen, videos]);
+
+  // Set up separate video references for fullscreen mode
+  useEffect(() => {
+    if (showFullscreen && videos.length > 0) {
+      // Initialize fullscreen video refs when entering fullscreen
+      Object.values(fullscreenVideoRefs.current).forEach((videoEl) => {
+        if (videoEl) {
+          videoEl.pause();
+          videoEl.muted = isMuted;
+        }
+      });
+    }
+  }, [showFullscreen]);
 
   // Set up Intersection Observer to detect which video is in view
   useEffect(() => {
@@ -86,7 +162,7 @@ const VideoGallery = () => {
 
               // Pause all videos and play the current one
               videos.forEach((video, idx) => {
-                const videoEl = videoRefs.current[video.id];
+                const videoEl = fullscreenVideoRefs.current[video.id];
                 if (videoEl) {
                   if (idx === index) {
                     videoEl.currentTime = 0;
@@ -105,11 +181,9 @@ const VideoGallery = () => {
       }, options);
 
       // Observe all video containers
-      Object.keys(videoRefs.current).forEach((id) => {
-        const container = document.querySelector(`[data-id="${id}"]`);
-        if (container) {
-          observerRef.current.observe(container);
-        }
+      const containers = document.querySelectorAll(".video-container");
+      containers.forEach((container) => {
+        observerRef.current.observe(container);
       });
 
       return () => {
@@ -118,7 +192,7 @@ const VideoGallery = () => {
         }
       };
     }
-  }, [videos, showFullscreen, isMuted, videoRefs.current]);
+  }, [videos, showFullscreen, isMuted, activeVideoIndex]);
 
   // Handle video thumbnail click to open fullscreen
   const handleVideoClick = (index) => {
@@ -133,30 +207,26 @@ const VideoGallery = () => {
     document.body.style.overflow = "auto";
 
     // Pause all videos
-    videos.forEach((video) => {
-      const videoEl = videoRefs.current[video.id];
+    Object.values(fullscreenVideoRefs.current).forEach((videoEl) => {
       if (videoEl) {
         videoEl.pause();
       }
     });
   };
 
-  // Toggle mute state
-  const toggleMute = () => {
-    setIsMuted(!isMuted);
+  // Toggle mute state - with corrected implementation
+  const handleToggleMute = (e) => {
+    e.stopPropagation(); // Prevent event bubbling
 
-    // Apply new mute state to current video
-    if (videos[activeVideoIndex]) {
-      const videoEl = videoRefs.current[videos[activeVideoIndex].id];
-      if (videoEl) {
-        videoEl.muted = !isMuted;
-      }
-    }
+    // Toggle mute state
+    setIsMuted(!isMuted);
   };
 
   // Toggle play/pause for current video
-  const togglePlayPause = (videoId) => {
-    const videoEl = videoRefs.current[videoId];
+  const togglePlayPause = (e, videoId) => {
+    e.stopPropagation(); // Prevent event bubbling
+
+    const videoEl = fullscreenVideoRefs.current[videoId];
     if (videoEl) {
       if (videoEl.paused) {
         videoEl.play().catch((err) => console.log("Play prevented"));
@@ -207,11 +277,12 @@ const VideoGallery = () => {
         } else if (e.key === "Escape") {
           closeFullscreen();
         } else if (e.key === "m") {
-          toggleMute();
+          setIsMuted(!isMuted);
         } else if (e.key === " ") {
           e.preventDefault();
           if (videos[activeVideoIndex]) {
-            togglePlayPause(videos[activeVideoIndex].id);
+            const e = { stopPropagation: () => {} };
+            togglePlayPause(e, videos[activeVideoIndex].id);
           }
         }
       }
@@ -219,7 +290,7 @@ const VideoGallery = () => {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [showFullscreen, activeVideoIndex, videos]);
+  }, [showFullscreen, activeVideoIndex, videos, isMuted]);
 
   if (loading) {
     return (
@@ -283,45 +354,37 @@ const VideoGallery = () => {
           {videos.map((video, index) => (
             <div
               key={video.id}
-              className="aspect-[9/16] relative rounded-md overflow-hidden bg-black cursor-pointer shadow-md transition-transform hover:scale-105 hover:shadow-lg"
+              className="aspect-[9/16] relative rounded-md overflow-hidden bg-gray-800 cursor-pointer shadow-md transition-transform hover:scale-105 hover:shadow-lg"
               onClick={() => handleVideoClick(index)}
             >
-              {/* Thumbnail preview */}
-              <video
-                ref={(el) => {
-                  videoRefs.current[video.id] = el;
-                }}
-                src={video.videoUrl}
-                className="absolute inset-0 w-full h-full object-cover"
-                playsInline
-                loop
-                muted
-                preload="metadata"
-              >
-                Your browser does not support the video tag.
-              </video>
+              {/* Thumbnail video element */}
+              <div className="absolute inset-0 w-full h-full overflow-hidden">
+                <video
+                  ref={(el) => {
+                    videoRefs.current[video.id] = el;
+                  }}
+                  src={video.videoUrl}
+                  className="absolute inset-0 w-full h-full object-cover"
+                  playsInline
+                  muted
+                  preload="metadata"
+                >
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+
+              {/* Loading indicator (shows until thumbnail is ready) */}
+              {!thumbnailsReady[video.id] && (
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-900 bg-opacity-50">
+                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-white border-t-transparent"></div>
+                </div>
+              )}
 
               {/* Overlay with info */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent/0 opacity-0 hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent/0 flex flex-col justify-end p-3">
                 <p className="text-white text-sm font-bold truncate">
                   فيديو {index + 1}
                 </p>
-                <div className="flex items-center mt-1">
-                  {/* Channel text removed */}
-                </div>
-              </div>
-
-              {/* Play icon on hover */}
-              <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                <div className="bg-black/40 rounded-full p-3">
-                  <svg
-                    className="w-8 h-8 text-white"
-                    fill="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path d="M8 5v14l11-7z" />
-                  </svg>
-                </div>
               </div>
             </div>
           ))}
@@ -382,25 +445,29 @@ const VideoGallery = () => {
                 className="video-container h-full w-full snap-start snap-always relative flex items-center justify-center"
                 data-id={video.id}
               >
-                {/* Video */}
-                <video
-                  onClick={() => togglePlayPause(video.id)}
-                  ref={(el) => {
-                    videoRefs.current[video.id] = el;
-                  }}
-                  src={video.videoUrl}
-                  className={`absolute inset-0 h-full ${
-                    isDesktop
-                      ? "w-3/4 mx-auto object-contain"
-                      : "w-full object-cover"
+                {/* Video player container */}
+                <div
+                  className={`relative ${
+                    isDesktop ? "w-3/4 h-full mx-auto" : "w-full h-full"
                   }`}
-                  playsInline
-                  loop
-                  muted={isMuted}
-                  controls={false}
                 >
-                  Your browser does not support the video tag.
-                </video>
+                  <video
+                    ref={(el) => {
+                      fullscreenVideoRefs.current[video.id] = el;
+                    }}
+                    src={video.videoUrl}
+                    className={`w-full h-full ${
+                      isDesktop ? "object-contain" : "object-cover"
+                    }`}
+                    playsInline
+                    loop
+                    muted={isMuted}
+                    controls={false}
+                    onClick={(e) => togglePlayPause(e, video.id)}
+                  >
+                    Your browser does not support the video tag.
+                  </video>
+                </div>
 
                 {/* UI overlay */}
                 <div className="absolute inset-0 pointer-events-none">
@@ -412,22 +479,19 @@ const VideoGallery = () => {
                   >
                     <div className="flex flex-col">
                       <p className="text-white font-bold">فيديو {index + 1}</p>
-                      {/* Channel text removed */}
                     </div>
                   </div>
 
-                  {/* Sound control */}
+                  {/* Sound control - with pointer-events-auto to make it clickable */}
                   <div
                     className={`absolute top-4 ${
                       isDesktop ? "right-1/4 -mr-10" : "right-4"
-                    } pointer-events-auto`}
+                    } pointer-events-auto z-20`}
                   >
                     <button
                       className="bg-black/30 p-2 rounded-full hover:bg-black/50"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleMute();
-                      }}
+                      onClick={handleToggleMute}
+                      aria-label={isMuted ? "Unmute" : "Mute"}
                     >
                       {isMuted ? (
                         <VolumeX className="w-6 h-6 text-white" />
@@ -441,7 +505,7 @@ const VideoGallery = () => {
                   <div
                     className={`absolute bottom-20 ${
                       isDesktop ? "right-1/4 -mr-10" : "right-3"
-                    } flex flex-col items-center pointer-events-auto`}
+                    } flex flex-col items-center pointer-events-auto z-20`}
                   >
                     {/* Share button */}
                     <button
@@ -471,8 +535,6 @@ const VideoGallery = () => {
               </div>
             ))}
           </div>
-
-          {/* Progress indicator removed as requested */}
         </div>
       )}
     </div>
