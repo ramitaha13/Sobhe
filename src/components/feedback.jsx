@@ -65,7 +65,7 @@ const FeedbackPage = () => {
           العودة
         </button>
       </div>
-      <h1 className="text-3xl font-bold text-center mb-8">أضف ملاحظه</h1>
+      <h1 className="text-3xl font-bold text-center mb-8">أضف ملاحظة</h1>
       <form
         onSubmit={handleFeedbackSubmit}
         className="max-w-lg mx-auto bg-white p-6 rounded-lg shadow-lg"
