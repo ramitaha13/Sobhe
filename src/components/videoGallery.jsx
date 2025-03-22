@@ -26,6 +26,10 @@ const VideoGallery = () => {
   const scrollRef = useRef(null);
   const navigate = useNavigate();
   const observerRef = useRef(null);
+  // Use this to track selected video ID when entering fullscreen
+  const selectedVideoId = useRef(null);
+  // Flag to know when we've entered fullscreen and refs are ready
+  const fullscreenInitialized = useRef(false);
 
   // Check for desktop/mobile viewport
   useEffect(() => {
@@ -123,18 +127,75 @@ const VideoGallery = () => {
     }
   }, [isMuted, activeVideoIndex, showFullscreen, videos]);
 
-  // Set up separate video references for fullscreen mode
+  // CRITICAL FIX: Handler for when showFullscreen changes
+  // This is the first part of the fix - capturing entry to fullscreen mode
   useEffect(() => {
     if (showFullscreen && videos.length > 0) {
-      // Initialize fullscreen video refs when entering fullscreen
+      // Store video ID of the selected video
+      if (videos[activeVideoIndex]) {
+        selectedVideoId.current = videos[activeVideoIndex].id;
+      }
+
+      // Pause all videos first
       Object.values(fullscreenVideoRefs.current).forEach((videoEl) => {
         if (videoEl) {
           videoEl.pause();
           videoEl.muted = isMuted;
         }
       });
+
+      // Mark that we need to initialize the fullscreen view
+      fullscreenInitialized.current = false;
+    } else {
+      // Reset when exiting fullscreen
+      fullscreenInitialized.current = false;
+      selectedVideoId.current = null;
     }
-  }, [showFullscreen]);
+  }, [showFullscreen, videos]);
+
+  // CRITICAL FIX: Play the correct video after fullscreen view is rendered
+  // This separates the initialization from playing to ensure refs are ready
+  useEffect(() => {
+    // Only run if we're in fullscreen mode
+    if (showFullscreen && videos.length > 0 && !fullscreenInitialized.current) {
+      // Get all video elements
+      const videoElements = document.querySelectorAll(".video-container");
+      if (videoElements.length > 0) {
+        // Once DOM is ready with video containers, play the right video
+        if (videos[activeVideoIndex]) {
+          const videoId = videos[activeVideoIndex].id;
+          const videoEl = fullscreenVideoRefs.current[videoId];
+
+          if (videoEl) {
+            // Pause all others first
+            Object.entries(fullscreenVideoRefs.current).forEach(([id, el]) => {
+              if (el && id !== videoId) {
+                el.pause();
+              }
+            });
+
+            // Play the selected video
+            videoEl.currentTime = 0;
+            videoEl.muted = isMuted;
+            videoEl
+              .play()
+              .catch((err) => console.log("Autoplay prevented:", err));
+
+            // Scroll to the selected video
+            if (scrollRef.current && videoElements[activeVideoIndex]) {
+              videoElements[activeVideoIndex].scrollIntoView({
+                behavior: "smooth",
+                block: "center",
+              });
+            }
+
+            // Mark as initialized
+            fullscreenInitialized.current = true;
+          }
+        }
+      }
+    }
+  }, [showFullscreen, videos, activeVideoIndex, fullscreenVideoRefs.current]);
 
   // Set up Intersection Observer to detect which video is in view
   useEffect(() => {
@@ -169,7 +230,7 @@ const VideoGallery = () => {
                     videoEl.muted = isMuted;
                     videoEl
                       .play()
-                      .catch((err) => console.log("Autoplay prevented"));
+                      .catch((err) => console.log("Autoplay prevented:", err));
                   } else {
                     videoEl.pause();
                   }
@@ -229,7 +290,7 @@ const VideoGallery = () => {
     const videoEl = fullscreenVideoRefs.current[videoId];
     if (videoEl) {
       if (videoEl.paused) {
-        videoEl.play().catch((err) => console.log("Play prevented"));
+        videoEl.play().catch((err) => console.log("Play prevented:", err));
       } else {
         videoEl.pause();
       }
@@ -251,20 +312,6 @@ const VideoGallery = () => {
       setActiveVideoIndex(activeVideoIndex - 1);
     }
   };
-
-  // Scroll to specific video index when in fullscreen
-  useEffect(() => {
-    if (showFullscreen && scrollRef.current) {
-      const videoElements =
-        scrollRef.current.querySelectorAll(".video-container");
-      if (videoElements[activeVideoIndex]) {
-        videoElements[activeVideoIndex].scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-        });
-      }
-    }
-  }, [activeVideoIndex, showFullscreen]);
 
   // Handle keyboard navigation
   useEffect(() => {
