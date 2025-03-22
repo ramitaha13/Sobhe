@@ -10,6 +10,8 @@ import {
   VolumeX,
   ChevronDown,
   ChevronUp,
+  Play,
+  Pause,
 } from "lucide-react";
 
 const VideoGallery = () => {
@@ -30,6 +32,10 @@ const VideoGallery = () => {
   const selectedVideoId = useRef(null);
   // Flag to know when we've entered fullscreen and refs are ready
   const fullscreenInitialized = useRef(false);
+  // Track play state for UI
+  const [playStates, setPlayStates] = useState({});
+  // Track when play indicator should be shown
+  const [showPlayIndicator, setShowPlayIndicator] = useState(false);
 
   // Check for desktop/mobile viewport
   useEffect(() => {
@@ -179,6 +185,13 @@ const VideoGallery = () => {
             videoEl.muted = isMuted;
             videoEl
               .play()
+              .then(() => {
+                // Update play state
+                setPlayStates((prev) => ({
+                  ...prev,
+                  [videoId]: true,
+                }));
+              })
               .catch((err) => console.log("Autoplay prevented:", err));
 
             // Scroll to the selected video
@@ -230,9 +243,21 @@ const VideoGallery = () => {
                     videoEl.muted = isMuted;
                     videoEl
                       .play()
+                      .then(() => {
+                        // Update play state for this video
+                        setPlayStates((prev) => ({
+                          ...prev,
+                          [video.id]: true,
+                        }));
+                      })
                       .catch((err) => console.log("Autoplay prevented:", err));
                   } else {
                     videoEl.pause();
+                    // Update play state for paused videos
+                    setPlayStates((prev) => ({
+                      ...prev,
+                      [video.id]: false,
+                    }));
                   }
                 }
               });
@@ -290,17 +315,35 @@ const VideoGallery = () => {
     const videoEl = fullscreenVideoRefs.current[videoId];
     if (videoEl) {
       if (videoEl.paused) {
-        videoEl.play().catch((err) => console.log("Play prevented:", err));
+        videoEl
+          .play()
+          .then(() => {
+            // Update play state
+            setPlayStates((prev) => ({
+              ...prev,
+              [videoId]: true,
+            }));
+
+            // Show play indicator briefly
+            setShowPlayIndicator(false);
+          })
+          .catch((err) => console.log("Play prevented:", err));
       } else {
         videoEl.pause();
-      }
+        // Update play state
+        setPlayStates((prev) => ({
+          ...prev,
+          [videoId]: false,
+        }));
 
-      // Update UI state
-      setVideos(
-        videos.map((v) =>
-          v.id === videoId ? { ...v, isPlaying: !videoEl.paused } : v
-        )
-      );
+        // Show pause indicator briefly
+        setShowPlayIndicator(true);
+
+        // Hide indicator after a brief moment
+        setTimeout(() => {
+          setShowPlayIndicator(false);
+        }, 800);
+      }
     }
   };
 
@@ -497,6 +540,7 @@ const VideoGallery = () => {
                   className={`relative ${
                     isDesktop ? "w-3/4 h-full mx-auto" : "w-full h-full"
                   }`}
+                  onClick={(e) => togglePlayPause(e, video.id)}
                 >
                   <video
                     ref={(el) => {
@@ -510,10 +554,22 @@ const VideoGallery = () => {
                     loop
                     muted={isMuted}
                     controls={false}
-                    onClick={(e) => togglePlayPause(e, video.id)}
                   >
                     Your browser does not support the video tag.
                   </video>
+
+                  {/* Play/Pause indicator overlay */}
+                  {showPlayIndicator && activeVideoIndex === index && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/20 pointer-events-none z-10 transition-opacity duration-300">
+                      <div className="bg-black/50 rounded-full p-4">
+                        {playStates[video.id] ? (
+                          <Play className="w-10 h-10 text-white" />
+                        ) : (
+                          <Pause className="w-10 h-10 text-white" />
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* UI overlay */}
