@@ -1,14 +1,15 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
 import { firestore } from "../firebase";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, Trash2, X } from "lucide-react";
+import { ArrowRight, Trash2, X, Play } from "lucide-react";
 
 const VideoGallery = () => {
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedVideo, setSelectedVideo] = useState(null);
+  const videoRefs = useRef({});
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -24,6 +25,7 @@ const VideoGallery = () => {
       const videoList = videoSnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
+        thumbnailGenerated: false,
       }));
 
       setVideos(videoList);
@@ -34,6 +36,46 @@ const VideoGallery = () => {
       setLoading(false);
     }
   };
+
+  // Generate thumbnails once videos are loaded
+  useEffect(() => {
+    if (videos.length > 0) {
+      // Allow time for video elements to be created in the DOM
+      const timeoutId = setTimeout(() => {
+        videos.forEach((video) => {
+          const videoElement = videoRefs.current[video.id];
+          if (videoElement && !video.thumbnailGenerated) {
+            // Listen for when video metadata is loaded to capture thumbnail
+            videoElement.addEventListener("loadeddata", () => {
+              // Set the time to a point in the video (e.g., 1 second)
+              videoElement.currentTime = 1.0;
+            });
+
+            // When time updates, the video frame will be at the specified timestamp
+            videoElement.addEventListener(
+              "timeupdate",
+              function onTimeUpdate() {
+                // Only proceed if we've actually seeked to a new timestamp
+                if (videoElement.currentTime > 0) {
+                  // Remove the event listener to avoid multiple captures
+                  videoElement.removeEventListener("timeupdate", onTimeUpdate);
+
+                  // Update the state to indicate thumbnail has been generated
+                  setVideos((prevVideos) =>
+                    prevVideos.map((v) =>
+                      v.id === video.id ? { ...v, thumbnailGenerated: true } : v
+                    )
+                  );
+                }
+              }
+            );
+          }
+        });
+      }, 500);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [videos]);
 
   // Handle video selection for modal view
   const handleVideoSelect = (video) => {
@@ -91,83 +133,80 @@ const VideoGallery = () => {
 
   return (
     <div
-      className="min-h-screen bg-gradient-to-b from-pink-50 to-white p-8"
+      className="min-h-screen bg-gradient-to-b from-pink-50 to-white p-4 sm:p-8"
       dir="rtl"
     >
       <div className="max-w-6xl mx-auto">
         {/* Back Button */}
         <button
           onClick={() => navigate("/managerPage")}
-          className="mb-6 px-6 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors duration-300 flex items-center"
+          className="mb-6 px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors duration-300 flex items-center"
         >
           <ArrowRight className="ml-2 h-4 w-4" />
           العودة
         </button>
 
         {/* Main Content */}
-        <div className="bg-white rounded-xl shadow-lg p-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">
+        <div className="bg-white rounded-xl shadow-lg p-4 sm:p-8">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 text-center">
             معرض الفيديوهات
           </h2>
 
           {videos.length === 0 ? (
-            <div className="text-center p-6 bg-gray-50 rounded-lg">
+            <div className="text-center p-4 sm:p-6 bg-gray-50 rounded-lg">
               <p className="text-gray-600">
                 لا توجد فيديوهات. قم برفع بعض الفيديوهات لعرضها هنا.
               </p>
               <button
                 onClick={() => navigate("/upload-video")}
-                className="mt-4 px-6 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors duration-300"
+                className="mt-4 px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors duration-300"
               >
                 رفع فيديو جديد
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {videos.map((video, index) => (
                 <div
                   key={video.id}
-                  className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-300"
+                  className="rounded-lg shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-300"
                 >
-                  <div className="relative">
+                  <div className="relative aspect-video bg-gray-900">
+                    {/* Hidden video element for thumbnail generation */}
                     <video
+                      ref={(el) => {
+                        videoRefs.current[video.id] = el;
+                      }}
                       src={video.videoUrl}
-                      className="w-full h-48 object-cover"
+                      className="w-full h-full object-cover"
+                      preload="metadata"
+                      muted
+                      playsInline
                       onClick={() => handleVideoSelect(video)}
                     >
                       Your browser does not support the video tag.
                     </video>
-                    <div
-                      className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 opacity-0 hover:opacity-100 transition-opacity duration-300"
-                      onClick={() => handleVideoSelect(video)}
-                    >
-                      <div className="bg-pink-600 text-white p-2 rounded-full">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="24"
-                          height="24"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                        </svg>
+
+                    {/* Play button overlay */}
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div
+                        className="bg-pink-600 bg-opacity-80 text-white p-3 rounded-full hover:bg-opacity-100 transition-all duration-300"
+                        onClick={() => handleVideoSelect(video)}
+                      >
+                        <Play className="h-6 w-6" />
                       </div>
                     </div>
+
+                    {/* Delete button */}
                     <button
                       onClick={(e) => handleDeleteVideo(video.id, e)}
-                      className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600"
+                      className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 z-10"
                     >
                       <Trash2 size={16} />
                     </button>
                   </div>
-                  <div className="p-4">
-                    <div className="text-sm text-gray-500">
-                      فيديو {index + 1}
-                    </div>
+                  <div className="p-4 bg-gray-800 text-white">
+                    <div className="text-sm">فيديو {index + 1}</div>
                   </div>
                 </div>
               ))}
@@ -176,38 +215,36 @@ const VideoGallery = () => {
         </div>
       </div>
 
-      {/* Video Modal - Fixed smaller size */}
+      {/* Video Modal - Improved for mobile */}
       {selectedVideo && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-2 sm:p-4"
           onClick={closeEnlargedView}
         >
           <div
-            className="bg-white rounded-lg w-full max-w-md"
-            style={{ maxHeight: "80vh" }}
+            className="bg-gray-900 rounded-lg w-full max-w-lg"
+            style={{ maxHeight: "90vh" }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-3 border-b flex justify-between items-center">
-              <h3 className="text-lg font-medium">عرض الفيديو</h3>
+            <div className="p-3 border-b border-gray-700 flex justify-between items-center">
+              <h3 className="text-lg font-medium text-white">عرض الفيديو</h3>
               <button
                 onClick={closeEnlargedView}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-300 hover:text-white"
               >
                 <X size={24} />
               </button>
             </div>
             <div className="p-4">
-              <div
-                className="w-full"
-                style={{ maxHeight: "400px", height: "auto" }}
-              >
+              <div className="w-full bg-black rounded-md overflow-hidden">
                 <video
                   src={selectedVideo.videoUrl}
-                  className="w-full h-auto rounded-md"
-                  style={{ maxHeight: "400px" }}
+                  className="w-full h-auto"
+                  style={{ maxHeight: "70vh" }}
                   controls
+                  autoPlay
                   controlsList="nodownload"
-                  preload="metadata"
+                  preload="auto"
                 >
                   Your browser does not support the video tag.
                 </video>
