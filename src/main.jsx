@@ -152,11 +152,19 @@ const router = createBrowserRouter([
   },
   {
     path: "/uploadvideos",
-    element: <Uploadvideos />,
+    element: (
+      <ProtectedRoute>
+        <Uploadvideos />
+      </ProtectedRoute>
+    ),
   },
   {
     path: "/videoGalleryAdmin",
-    element: <VideoGalleryAdmin />,
+    element: (
+      <ProtectedRoute>
+        <VideoGalleryAdmin />
+      </ProtectedRoute>
+    ),
   },
   {
     path: "/videoGallery",
