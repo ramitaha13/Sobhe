@@ -1,14 +1,16 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { firestore } from "../firebase";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, X } from "lucide-react";
+import { ArrowRight, X, Play } from "lucide-react";
 
 const VideoGallery = () => {
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedVideo, setSelectedVideo] = useState(null);
+  const [thumbnails, setThumbnails] = useState({});
+  const videoRefs = useRef({});
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -34,6 +36,63 @@ const VideoGallery = () => {
       setLoading(false);
     }
   };
+
+  // Generate thumbnails for videos
+  useEffect(() => {
+    const generateThumbnails = async () => {
+      const newThumbnails = { ...thumbnails };
+
+      for (const video of videos) {
+        if (!videoRefs.current[video.id]) continue;
+
+        const videoElement = videoRefs.current[video.id];
+
+        // Only proceed if this video's thumbnail hasn't been generated yet
+        if (!newThumbnails[video.id]) {
+          // Make sure metadata is loaded
+          if (videoElement.readyState === 0) {
+            // If metadata not loaded, add event listener for when it is
+            videoElement.addEventListener(
+              "loadedmetadata",
+              () => {
+                // Set current time to 1 second (or half duration if video is short)
+                const seekTime =
+                  videoElement.duration > 2 ? 1.0 : videoElement.duration / 2;
+                videoElement.currentTime = seekTime;
+              },
+              { once: true }
+            );
+          } else {
+            // Metadata already loaded, set time directly
+            const seekTime =
+              videoElement.duration > 2 ? 1.0 : videoElement.duration / 2;
+            videoElement.currentTime = seekTime;
+          }
+
+          // When time updates after seeking
+          videoElement.addEventListener(
+            "timeupdate",
+            function onTimeUpdate() {
+              if (videoElement.currentTime > 0) {
+                // Remove the event listener to avoid multiple captures
+                videoElement.removeEventListener("timeupdate", onTimeUpdate);
+
+                // Mark this thumbnail as generated
+                newThumbnails[video.id] = true;
+                setThumbnails(newThumbnails);
+              }
+            },
+            { once: true }
+          );
+        }
+      }
+    };
+
+    if (videos.length > 0 && !loading) {
+      const timeoutId = setTimeout(generateThumbnails, 300);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [videos, loading, thumbnails]);
 
   // Handle video selection for modal view
   const handleVideoSelect = (video) => {
@@ -71,77 +130,68 @@ const VideoGallery = () => {
 
   return (
     <div
-      className="min-h-screen bg-gradient-to-b from-pink-50 to-white p-8"
+      className="min-h-screen bg-gradient-to-b from-pink-50 to-white p-4 sm:p-8"
       dir="rtl"
     >
       <div className="max-w-6xl mx-auto">
         {/* Back Button */}
         <button
           onClick={() => navigate("/")}
-          className="mb-6 px-6 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors duration-300 flex items-center"
+          className="mb-6 px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors duration-300 flex items-center"
         >
           <ArrowRight className="ml-2 h-4 w-4" />
           العودة
         </button>
 
         {/* Main Content */}
-        <div className="bg-white rounded-xl shadow-lg p-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">
+        <div className="bg-white rounded-xl shadow-lg p-4 sm:p-8">
+          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 text-center">
             معرض الفيديوهات
           </h2>
 
           {videos.length === 0 ? (
-            <div className="text-center p-6 bg-gray-50 rounded-lg">
-              <p className="text-gray-600">
-                لا توجد فيديوهات. قم برفع بعض الفيديوهات لعرضها هنا.
-              </p>
-              <button
-                onClick={() => navigate("/upload-video")}
-                className="mt-4 px-6 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors duration-300"
-              >
-                رفع فيديو جديد
-              </button>
+            <div className="text-center p-4 sm:p-6 bg-gray-50 rounded-lg">
+              <p className="text-gray-600">لا توجد فيديوهات متاحة حالياً.</p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {videos.map((video, index) => (
                 <div
                   key={video.id}
-                  className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-300"
+                  className="rounded-lg shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-300 bg-gray-800"
                 >
-                  <div className="relative">
+                  <div className="relative aspect-video">
+                    {/* Thumbnail video element */}
                     <video
+                      ref={(el) => {
+                        videoRefs.current[video.id] = el;
+                      }}
                       src={video.videoUrl}
-                      className="w-full h-48 object-cover"
+                      className="absolute inset-0 w-full h-full object-cover"
+                      crossOrigin="anonymous"
+                      preload="metadata"
+                      playsInline
+                      muted
                       onClick={() => handleVideoSelect(video)}
                     >
                       Your browser does not support the video tag.
                     </video>
+
+                    {/* Gradient overlay to ensure play button visibility */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent pointer-events-none"></div>
+
+                    {/* Play button overlay */}
                     <div
-                      className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 opacity-0 hover:opacity-100 transition-opacity duration-300"
+                      className="absolute inset-0 flex items-center justify-center"
                       onClick={() => handleVideoSelect(video)}
                     >
-                      <div className="bg-pink-600 text-white p-2 rounded-full">
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="24"
-                          height="24"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <polygon points="5 3 19 12 5 21 5 3"></polygon>
-                        </svg>
+                      <div className="bg-pink-600 bg-opacity-80 text-white p-3 rounded-full hover:bg-opacity-100 transition-all duration-300 z-10">
+                        <Play className="h-6 w-6" />
                       </div>
                     </div>
                   </div>
-                  <div className="p-4">
-                    <div className="text-sm text-gray-500">
-                      فيديو {index + 1}
-                    </div>
+                  <div className="p-3 text-white">
+                    <div className="text-sm font-medium">فيديو {index + 1}</div>
                   </div>
                 </div>
               ))}
@@ -150,38 +200,36 @@ const VideoGallery = () => {
         </div>
       </div>
 
-      {/* Video Modal - Fixed smaller size */}
+      {/* Video Modal */}
       {selectedVideo && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-2 sm:p-4"
           onClick={closeEnlargedView}
         >
           <div
-            className="bg-white rounded-lg w-full max-w-md"
-            style={{ maxHeight: "80vh" }}
+            className="bg-gray-900 rounded-lg w-full max-w-md"
+            style={{ maxHeight: "90vh" }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="p-3 border-b flex justify-between items-center">
-              <h3 className="text-lg font-medium">عرض الفيديو</h3>
+            <div className="p-3 border-b border-gray-700 flex justify-between items-center">
+              <h3 className="text-lg font-medium text-white">عرض الفيديو</h3>
               <button
                 onClick={closeEnlargedView}
-                className="text-gray-500 hover:text-gray-700"
+                className="text-gray-300 hover:text-white"
               >
                 <X size={24} />
               </button>
             </div>
             <div className="p-4">
-              <div
-                className="w-full"
-                style={{ maxHeight: "400px", height: "auto" }}
-              >
+              <div className="w-full bg-black rounded-md overflow-hidden">
                 <video
                   src={selectedVideo.videoUrl}
-                  className="w-full h-auto rounded-md"
-                  style={{ maxHeight: "400px" }}
+                  className="w-full h-auto"
+                  style={{ maxHeight: "70vh" }}
                   controls
+                  autoPlay
                   controlsList="nodownload"
-                  preload="metadata"
+                  preload="auto"
                 >
                   Your browser does not support the video tag.
                 </video>
