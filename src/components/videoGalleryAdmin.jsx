@@ -9,6 +9,7 @@ const VideoGallery = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedVideo, setSelectedVideo] = useState(null);
+  const [thumbnails, setThumbnails] = useState({});
   const videoRefs = useRef({});
   const navigate = useNavigate();
 
@@ -25,7 +26,6 @@ const VideoGallery = () => {
       const videoList = videoSnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
-        thumbnailGenerated: false,
       }));
 
       setVideos(videoList);
@@ -37,45 +37,62 @@ const VideoGallery = () => {
     }
   };
 
-  // Generate thumbnails once videos are loaded
+  // Generate thumbnails for videos
   useEffect(() => {
-    if (videos.length > 0) {
-      // Allow time for video elements to be created in the DOM
-      const timeoutId = setTimeout(() => {
-        videos.forEach((video) => {
-          const videoElement = videoRefs.current[video.id];
-          if (videoElement && !video.thumbnailGenerated) {
-            // Listen for when video metadata is loaded to capture thumbnail
-            videoElement.addEventListener("loadeddata", () => {
-              // Set the time to a point in the video (e.g., 1 second)
-              videoElement.currentTime = 1.0;
-            });
+    const generateThumbnails = async () => {
+      const newThumbnails = { ...thumbnails };
 
-            // When time updates, the video frame will be at the specified timestamp
+      for (const video of videos) {
+        if (!videoRefs.current[video.id]) continue;
+
+        const videoElement = videoRefs.current[video.id];
+
+        // Only proceed if this video's thumbnail hasn't been generated yet
+        if (!newThumbnails[video.id]) {
+          // Make sure metadata is loaded
+          if (videoElement.readyState === 0) {
+            // If metadata not loaded, add event listener for when it is
             videoElement.addEventListener(
-              "timeupdate",
-              function onTimeUpdate() {
-                // Only proceed if we've actually seeked to a new timestamp
-                if (videoElement.currentTime > 0) {
-                  // Remove the event listener to avoid multiple captures
-                  videoElement.removeEventListener("timeupdate", onTimeUpdate);
-
-                  // Update the state to indicate thumbnail has been generated
-                  setVideos((prevVideos) =>
-                    prevVideos.map((v) =>
-                      v.id === video.id ? { ...v, thumbnailGenerated: true } : v
-                    )
-                  );
-                }
-              }
+              "loadedmetadata",
+              () => {
+                // Set current time to 1 second (or half duration if video is short)
+                const seekTime =
+                  videoElement.duration > 2 ? 1.0 : videoElement.duration / 2;
+                videoElement.currentTime = seekTime;
+              },
+              { once: true }
             );
+          } else {
+            // Metadata already loaded, set time directly
+            const seekTime =
+              videoElement.duration > 2 ? 1.0 : videoElement.duration / 2;
+            videoElement.currentTime = seekTime;
           }
-        });
-      }, 500);
 
+          // When time updates after seeking
+          videoElement.addEventListener(
+            "timeupdate",
+            function onTimeUpdate() {
+              if (videoElement.currentTime > 0) {
+                // Remove the event listener to avoid multiple captures
+                videoElement.removeEventListener("timeupdate", onTimeUpdate);
+
+                // Mark this thumbnail as generated
+                newThumbnails[video.id] = true;
+                setThumbnails(newThumbnails);
+              }
+            },
+            { once: true }
+          );
+        }
+      }
+    };
+
+    if (videos.length > 0 && !loading) {
+      const timeoutId = setTimeout(generateThumbnails, 300);
       return () => clearTimeout(timeoutId);
     }
-  }, [videos]);
+  }, [videos, loading, thumbnails]);
 
   // Handle video selection for modal view
   const handleVideoSelect = (video) => {
@@ -169,30 +186,34 @@ const VideoGallery = () => {
               {videos.map((video, index) => (
                 <div
                   key={video.id}
-                  className="rounded-lg shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-300"
+                  className="rounded-lg shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-300 bg-gray-800"
                 >
-                  <div className="relative aspect-video bg-gray-900">
-                    {/* Hidden video element for thumbnail generation */}
+                  <div className="relative aspect-video">
+                    {/* Thumbnail video element */}
                     <video
                       ref={(el) => {
                         videoRefs.current[video.id] = el;
                       }}
                       src={video.videoUrl}
-                      className="w-full h-full object-cover"
+                      className="absolute inset-0 w-full h-full object-cover"
+                      crossOrigin="anonymous"
                       preload="metadata"
-                      muted
                       playsInline
+                      muted
                       onClick={() => handleVideoSelect(video)}
                     >
                       Your browser does not support the video tag.
                     </video>
 
+                    {/* Gradient overlay to ensure play button visibility */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent pointer-events-none"></div>
+
                     {/* Play button overlay */}
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <div
-                        className="bg-pink-600 bg-opacity-80 text-white p-3 rounded-full hover:bg-opacity-100 transition-all duration-300"
-                        onClick={() => handleVideoSelect(video)}
-                      >
+                    <div
+                      className="absolute inset-0 flex items-center justify-center"
+                      onClick={() => handleVideoSelect(video)}
+                    >
+                      <div className="bg-pink-600 bg-opacity-80 text-white p-3 rounded-full hover:bg-opacity-100 transition-all duration-300 z-10">
                         <Play className="h-6 w-6" />
                       </div>
                     </div>
@@ -200,13 +221,13 @@ const VideoGallery = () => {
                     {/* Delete button */}
                     <button
                       onClick={(e) => handleDeleteVideo(video.id, e)}
-                      className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 z-10"
+                      className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-full hover:bg-red-600 z-20"
                     >
                       <Trash2 size={16} />
                     </button>
                   </div>
-                  <div className="p-4 bg-gray-800 text-white">
-                    <div className="text-sm">فيديو {index + 1}</div>
+                  <div className="p-3 text-white">
+                    <div className="text-sm font-medium">فيديو {index + 1}</div>
                   </div>
                 </div>
               ))}
@@ -215,7 +236,7 @@ const VideoGallery = () => {
         </div>
       </div>
 
-      {/* Video Modal - Improved for mobile */}
+      {/* Video Modal */}
       {selectedVideo && (
         <div
           className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-2 sm:p-4"
