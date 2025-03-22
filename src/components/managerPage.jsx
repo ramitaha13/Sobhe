@@ -9,6 +9,8 @@ import {
   UserCircle,
   Bell,
   X,
+  Upload,
+  Play,
 } from "lucide-react";
 import {
   getFirestore,
@@ -127,7 +129,7 @@ const ManagerPage = () => {
     return `${day}/${month}/${year} ${hours}:${minutes}`;
   };
 
-  // Added new menu item for reservations from week before today
+  // Added new menu items for video management
   const menuItems = [
     {
       title: "إدارة الصور",
@@ -140,6 +142,18 @@ const ManagerPage = () => {
       icon: <Image className="h-8 w-8 text-pink-600" />,
       onClick: () => navigate("/showImahesforadmin"),
       description: "تعديل معرض الصور",
+    },
+    {
+      title: "رفع الفيديوهات",
+      icon: <Upload className="h-8 w-8 text-pink-600" />,
+      onClick: () => navigate("/uploadVideos"),
+      description: "إضافة فيديوهات جديدة",
+    },
+    {
+      title: "عرض الفيديوهات",
+      icon: <Play className="h-8 w-8 text-pink-600" />,
+      onClick: () => navigate("/videoGalleryAdmin"),
+      description: "عرض وإدارة الفيديوهات",
     },
     {
       title: "إدارة الحجوزات",
