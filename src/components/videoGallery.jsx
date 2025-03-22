@@ -2,16 +2,38 @@ import React, { useState, useEffect, useRef } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { firestore } from "../firebase";
 import { useNavigate } from "react-router-dom";
-import { ArrowRight, X, Play } from "lucide-react";
+import {
+  ArrowRight,
+  X,
+  Share2,
+  Volume2,
+  VolumeX,
+  ChevronDown,
+  ChevronUp,
+} from "lucide-react";
 
 const VideoGallery = () => {
   const [videos, setVideos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [selectedVideo, setSelectedVideo] = useState(null);
-  const [thumbnails, setThumbnails] = useState({});
+  const [activeVideoIndex, setActiveVideoIndex] = useState(0);
+  const [isMuted, setIsMuted] = useState(true);
+  const [showFullscreen, setShowFullscreen] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
   const videoRefs = useRef({});
+  const scrollRef = useRef(null);
   const navigate = useNavigate();
+  const observerRef = useRef(null);
+
+  // Check for desktop/mobile viewport
+  useEffect(() => {
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth >= 1024);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     fetchVideos();
@@ -26,6 +48,7 @@ const VideoGallery = () => {
       const videoList = videoSnapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
+        isPlaying: false,
       }));
 
       setVideos(videoList);
@@ -37,80 +60,179 @@ const VideoGallery = () => {
     }
   };
 
-  // Generate thumbnails for videos
+  // Set up Intersection Observer to detect which video is in view
   useEffect(() => {
-    const generateThumbnails = async () => {
-      const newThumbnails = { ...thumbnails };
+    if (videos.length > 0 && showFullscreen) {
+      const options = {
+        root: null,
+        rootMargin: "0px",
+        threshold: 0.8, // 80% of the item must be visible
+      };
 
-      for (const video of videos) {
-        if (!videoRefs.current[video.id]) continue;
+      // Disconnect previous observer if exists
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
 
-        const videoElement = videoRefs.current[video.id];
+      // Create new observer
+      observerRef.current = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const videoId = entry.target.dataset.id;
+            const index = videos.findIndex((v) => v.id === videoId);
 
-        // Only proceed if this video's thumbnail hasn't been generated yet
-        if (!newThumbnails[video.id]) {
-          // Make sure metadata is loaded
-          if (videoElement.readyState === 0) {
-            // If metadata not loaded, add event listener for when it is
-            videoElement.addEventListener(
-              "loadedmetadata",
-              () => {
-                // Set current time to 1 second (or half duration if video is short)
-                const seekTime =
-                  videoElement.duration > 2 ? 1.0 : videoElement.duration / 2;
-                videoElement.currentTime = seekTime;
-              },
-              { once: true }
-            );
-          } else {
-            // Metadata already loaded, set time directly
-            const seekTime =
-              videoElement.duration > 2 ? 1.0 : videoElement.duration / 2;
-            videoElement.currentTime = seekTime;
+            if (index !== -1 && index !== activeVideoIndex) {
+              setActiveVideoIndex(index);
+
+              // Pause all videos and play the current one
+              videos.forEach((video, idx) => {
+                const videoEl = videoRefs.current[video.id];
+                if (videoEl) {
+                  if (idx === index) {
+                    videoEl.currentTime = 0;
+                    videoEl.muted = isMuted;
+                    videoEl
+                      .play()
+                      .catch((err) => console.log("Autoplay prevented"));
+                  } else {
+                    videoEl.pause();
+                  }
+                }
+              });
+            }
           }
+        });
+      }, options);
 
-          // When time updates after seeking
-          videoElement.addEventListener(
-            "timeupdate",
-            function onTimeUpdate() {
-              if (videoElement.currentTime > 0) {
-                // Remove the event listener to avoid multiple captures
-                videoElement.removeEventListener("timeupdate", onTimeUpdate);
+      // Observe all video containers
+      Object.keys(videoRefs.current).forEach((id) => {
+        const container = document.querySelector(`[data-id="${id}"]`);
+        if (container) {
+          observerRef.current.observe(container);
+        }
+      });
 
-                // Mark this thumbnail as generated
-                newThumbnails[video.id] = true;
-                setThumbnails(newThumbnails);
-              }
-            },
-            { once: true }
-          );
+      return () => {
+        if (observerRef.current) {
+          observerRef.current.disconnect();
+        }
+      };
+    }
+  }, [videos, showFullscreen, isMuted, videoRefs.current]);
+
+  // Handle video thumbnail click to open fullscreen
+  const handleVideoClick = (index) => {
+    setActiveVideoIndex(index);
+    setShowFullscreen(true);
+    document.body.style.overflow = "hidden";
+  };
+
+  // Close fullscreen mode
+  const closeFullscreen = () => {
+    setShowFullscreen(false);
+    document.body.style.overflow = "auto";
+
+    // Pause all videos
+    videos.forEach((video) => {
+      const videoEl = videoRefs.current[video.id];
+      if (videoEl) {
+        videoEl.pause();
+      }
+    });
+  };
+
+  // Toggle mute state
+  const toggleMute = () => {
+    setIsMuted(!isMuted);
+
+    // Apply new mute state to current video
+    if (videos[activeVideoIndex]) {
+      const videoEl = videoRefs.current[videos[activeVideoIndex].id];
+      if (videoEl) {
+        videoEl.muted = !isMuted;
+      }
+    }
+  };
+
+  // Toggle play/pause for current video
+  const togglePlayPause = (videoId) => {
+    const videoEl = videoRefs.current[videoId];
+    if (videoEl) {
+      if (videoEl.paused) {
+        videoEl.play().catch((err) => console.log("Play prevented"));
+      } else {
+        videoEl.pause();
+      }
+
+      // Update UI state
+      setVideos(
+        videos.map((v) =>
+          v.id === videoId ? { ...v, isPlaying: !videoEl.paused } : v
+        )
+      );
+    }
+  };
+
+  // Navigate between videos
+  const handleNavigation = (direction) => {
+    if (direction === "next" && activeVideoIndex < videos.length - 1) {
+      setActiveVideoIndex(activeVideoIndex + 1);
+    } else if (direction === "prev" && activeVideoIndex > 0) {
+      setActiveVideoIndex(activeVideoIndex - 1);
+    }
+  };
+
+  // Scroll to specific video index when in fullscreen
+  useEffect(() => {
+    if (showFullscreen && scrollRef.current) {
+      const videoElements =
+        scrollRef.current.querySelectorAll(".video-container");
+      if (videoElements[activeVideoIndex]) {
+        videoElements[activeVideoIndex].scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }
+    }
+  }, [activeVideoIndex, showFullscreen]);
+
+  // Handle keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (showFullscreen) {
+        if (e.key === "ArrowDown" || e.key === "j") {
+          handleNavigation("next");
+        } else if (e.key === "ArrowUp" || e.key === "k") {
+          handleNavigation("prev");
+        } else if (e.key === "Escape") {
+          closeFullscreen();
+        } else if (e.key === "m") {
+          toggleMute();
+        } else if (e.key === " ") {
+          e.preventDefault();
+          if (videos[activeVideoIndex]) {
+            togglePlayPause(videos[activeVideoIndex].id);
+          }
         }
       }
     };
 
-    if (videos.length > 0 && !loading) {
-      const timeoutId = setTimeout(generateThumbnails, 300);
-      return () => clearTimeout(timeoutId);
-    }
-  }, [videos, loading, thumbnails]);
-
-  // Handle video selection for modal view
-  const handleVideoSelect = (video) => {
-    setSelectedVideo(video);
-  };
-
-  // Close modal view
-  const closeEnlargedView = () => {
-    setSelectedVideo(null);
-  };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showFullscreen, activeVideoIndex, videos]);
 
   if (loading) {
     return (
       <div
-        className="min-h-screen bg-gradient-to-b from-pink-50 to-white p-8 flex justify-center items-center"
+        className="min-h-screen bg-black flex justify-center items-center"
         dir="rtl"
       >
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-pink-600"></div>
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white"></div>
+          <p className="mt-4 text-white font-medium">
+            جاري تحميل الفيديوهات...
+          </p>
+        </div>
       </div>
     );
   }
@@ -118,124 +240,239 @@ const VideoGallery = () => {
   if (error) {
     return (
       <div
-        className="min-h-screen bg-gradient-to-b from-pink-50 to-white p-8 flex justify-center items-center"
+        className="min-h-screen bg-black p-6 flex justify-center items-center"
         dir="rtl"
       >
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-          <p>{error}</p>
+        <div className="bg-gray-900 border-l-4 border-red-500 text-white p-4 rounded shadow-md max-w-sm w-full">
+          <div className="flex items-center">
+            <div className="text-lg">⚠️</div>
+            <div className="mr-3">
+              <p className="font-medium">{error}</p>
+              <button
+                onClick={() => fetchVideos()}
+                className="mt-2 text-sm font-medium text-pink-400 hover:text-pink-300"
+              >
+                إعادة المحاولة
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div
-      className="min-h-screen bg-gradient-to-b from-pink-50 to-white p-4 sm:p-8"
-      dir="rtl"
-    >
-      <div className="max-w-6xl mx-auto">
-        {/* Back Button */}
+    <div className="min-h-screen bg-gray-100" dir="rtl">
+      {/* Header */}
+      <header className="sticky top-0 bg-white shadow-sm z-10 px-4 py-3 flex items-center justify-between">
         <button
           onClick={() => navigate("/")}
-          className="mb-6 px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors duration-300 flex items-center"
+          className="flex items-center text-gray-700 font-medium"
         >
-          <ArrowRight className="ml-2 h-4 w-4" />
-          العودة
+          <ArrowRight className="ml-1 h-5 w-5" />
+          <span>العودة</span>
         </button>
+        <h1 className="text-xl font-bold text-gray-800">معرض الفيديوهات</h1>
+        <div className="w-10"></div> {/* Spacer for alignment */}
+      </header>
 
-        {/* Main Content */}
-        <div className="bg-white rounded-xl shadow-lg p-4 sm:p-8">
-          <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-6 text-center">
-            معرض الفيديوهات
-          </h2>
+      {/* Grid Feed (Like TikTok "For You" page) */}
+      <div className="p-2 lg:p-6">
+        {/* Responsive grid: 2 columns on mobile, 3 on tablet, 4 on desktop */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 lg:gap-4">
+          {videos.map((video, index) => (
+            <div
+              key={video.id}
+              className="aspect-[9/16] relative rounded-md overflow-hidden bg-black cursor-pointer shadow-md transition-transform hover:scale-105 hover:shadow-lg"
+              onClick={() => handleVideoClick(index)}
+            >
+              {/* Thumbnail preview */}
+              <video
+                ref={(el) => {
+                  videoRefs.current[video.id] = el;
+                }}
+                src={video.videoUrl}
+                className="absolute inset-0 w-full h-full object-cover"
+                playsInline
+                loop
+                muted
+                preload="metadata"
+              >
+                Your browser does not support the video tag.
+              </video>
 
-          {videos.length === 0 ? (
-            <div className="text-center p-4 sm:p-6 bg-gray-50 rounded-lg">
-              <p className="text-gray-600">لا توجد فيديوهات متاحة حالياً.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              {videos.map((video, index) => (
-                <div
-                  key={video.id}
-                  className="rounded-lg shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-300 bg-gray-800"
-                >
-                  <div className="relative aspect-video">
-                    {/* Thumbnail video element */}
-                    <video
-                      ref={(el) => {
-                        videoRefs.current[video.id] = el;
-                      }}
-                      src={video.videoUrl}
-                      className="absolute inset-0 w-full h-full object-cover"
-                      crossOrigin="anonymous"
-                      preload="metadata"
-                      playsInline
-                      muted
-                      onClick={() => handleVideoSelect(video)}
-                    >
-                      Your browser does not support the video tag.
-                    </video>
-
-                    {/* Gradient overlay to ensure play button visibility */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent pointer-events-none"></div>
-
-                    {/* Play button overlay */}
-                    <div
-                      className="absolute inset-0 flex items-center justify-center"
-                      onClick={() => handleVideoSelect(video)}
-                    >
-                      <div className="bg-pink-600 bg-opacity-80 text-white p-3 rounded-full hover:bg-opacity-100 transition-all duration-300 z-10">
-                        <Play className="h-6 w-6" />
-                      </div>
-                    </div>
-                  </div>
-                  <div className="p-3 text-white">
-                    <div className="text-sm font-medium">فيديو {index + 1}</div>
-                  </div>
+              {/* Overlay with info */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent/0 opacity-0 hover:opacity-100 transition-opacity flex flex-col justify-end p-3">
+                <p className="text-white text-sm font-bold truncate">
+                  فيديو {index + 1}
+                </p>
+                <div className="flex items-center mt-1">
+                  {/* Channel text removed */}
                 </div>
-              ))}
+              </div>
+
+              {/* Play icon on hover */}
+              <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
+                <div className="bg-black/40 rounded-full p-3">
+                  <svg
+                    className="w-8 h-8 text-white"
+                    fill="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path d="M8 5v14l11-7z" />
+                  </svg>
+                </div>
+              </div>
             </div>
-          )}
+          ))}
         </div>
       </div>
 
-      {/* Video Modal */}
-      {selectedVideo && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-2 sm:p-4"
-          onClick={closeEnlargedView}
-        >
-          <div
-            className="bg-gray-900 rounded-lg w-full max-w-md"
-            style={{ maxHeight: "90vh" }}
-            onClick={(e) => e.stopPropagation()}
+      {/* Fullscreen TikTok-style feed with desktop enhancements */}
+      {showFullscreen && (
+        <div className="fixed inset-0 bg-black z-50 flex">
+          {/* Close button */}
+          <button
+            onClick={closeFullscreen}
+            className="absolute top-3 left-3 z-50 bg-black/50 p-2 rounded-full text-white hover:bg-black/70"
           >
-            <div className="p-3 border-b border-gray-700 flex justify-between items-center">
-              <h3 className="text-lg font-medium text-white">عرض الفيديو</h3>
-              <button
-                onClick={closeEnlargedView}
-                className="text-gray-300 hover:text-white"
-              >
-                <X size={24} />
-              </button>
+            <X className="h-6 w-6" />
+          </button>
+
+          {/* Desktop: Show navigation arrows on sides if on desktop */}
+          {isDesktop && (
+            <>
+              {activeVideoIndex > 0 && (
+                <button
+                  onClick={() => handleNavigation("prev")}
+                  className="absolute left-5 top-1/2 transform -translate-y-1/2 bg-black/30 hover:bg-black/50 p-3 rounded-full text-white z-40"
+                >
+                  <ChevronUp className="h-8 w-8" />
+                </button>
+              )}
+              {activeVideoIndex < videos.length - 1 && (
+                <button
+                  onClick={() => handleNavigation("next")}
+                  className="absolute left-5 top-2/3 transform -translate-y-1/2 bg-black/30 hover:bg-black/50 p-3 rounded-full text-white z-40"
+                >
+                  <ChevronDown className="h-8 w-8" />
+                </button>
+              )}
+            </>
+          )}
+
+          {/* Desktop: Keyboard shortcuts help */}
+          {isDesktop && (
+            <div className="absolute top-3 right-3 z-50 bg-black/50 p-2 rounded text-white text-xs">
+              <p>↑/↓: التنقل | م: كتم | مسافة: تشغيل/إيقاف | Esc: إغلاق</p>
             </div>
-            <div className="p-4">
-              <div className="w-full bg-black rounded-md overflow-hidden">
+          )}
+
+          {/* Vertical scrollable feed */}
+          <div
+            ref={scrollRef}
+            className={`h-full ${
+              isDesktop ? "w-4/5 mx-auto" : "w-full"
+            } overflow-y-scroll snap-y snap-mandatory`}
+            style={{ scrollSnapType: "y mandatory" }}
+          >
+            {videos.map((video, index) => (
+              <div
+                key={video.id}
+                className="video-container h-full w-full snap-start snap-always relative flex items-center justify-center"
+                data-id={video.id}
+              >
+                {/* Video */}
                 <video
-                  src={selectedVideo.videoUrl}
-                  className="w-full h-auto"
-                  style={{ maxHeight: "70vh" }}
-                  controls
-                  autoPlay
-                  controlsList="nodownload"
-                  preload="auto"
+                  onClick={() => togglePlayPause(video.id)}
+                  ref={(el) => {
+                    videoRefs.current[video.id] = el;
+                  }}
+                  src={video.videoUrl}
+                  className={`absolute inset-0 h-full ${
+                    isDesktop
+                      ? "w-3/4 mx-auto object-contain"
+                      : "w-full object-cover"
+                  }`}
+                  playsInline
+                  loop
+                  muted={isMuted}
+                  controls={false}
                 >
                   Your browser does not support the video tag.
                 </video>
+
+                {/* UI overlay */}
+                <div className="absolute inset-0 pointer-events-none">
+                  {/* Video info at bottom */}
+                  <div
+                    className={`absolute bottom-0 left-0 right-0 p-4 pointer-events-auto ${
+                      isDesktop ? "w-3/4 mx-auto" : "w-full"
+                    }`}
+                  >
+                    <div className="flex flex-col">
+                      <p className="text-white font-bold">فيديو {index + 1}</p>
+                      {/* Channel text removed */}
+                    </div>
+                  </div>
+
+                  {/* Sound control */}
+                  <div
+                    className={`absolute top-4 ${
+                      isDesktop ? "right-1/4 -mr-10" : "right-4"
+                    } pointer-events-auto`}
+                  >
+                    <button
+                      className="bg-black/30 p-2 rounded-full hover:bg-black/50"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleMute();
+                      }}
+                    >
+                      {isMuted ? (
+                        <VolumeX className="w-6 h-6 text-white" />
+                      ) : (
+                        <Volume2 className="w-6 h-6 text-white" />
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Only Share button */}
+                  <div
+                    className={`absolute bottom-20 ${
+                      isDesktop ? "right-1/4 -mr-10" : "right-3"
+                    } flex flex-col items-center pointer-events-auto`}
+                  >
+                    {/* Share button */}
+                    <button
+                      className="flex flex-col items-center bg-black/30 p-3 rounded-full hover:bg-black/50"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        // Implement share functionality
+                        if (navigator.share) {
+                          navigator
+                            .share({
+                              title: `فيديو ${index + 1}`,
+                              text: "شاهد هذا الفيديو الرائع!",
+                              url: window.location.href,
+                            })
+                            .catch((err) => console.log("Share failed:", err));
+                        } else {
+                          // Fallback for browsers that don't support Web Share API
+                          alert("تم نسخ رابط الفيديو!");
+                        }
+                      }}
+                    >
+                      <Share2 className="w-8 h-8 text-white" />
+                      <span className="text-white text-xs mt-1">مشاركة</span>
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
+            ))}
           </div>
+
+          {/* Progress indicator removed as requested */}
         </div>
       )}
     </div>
