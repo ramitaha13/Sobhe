@@ -20,6 +20,8 @@ import {
   Pause,
   Heart,
 } from "lucide-react";
+// Import the logo
+import LogoImage from "../assets/logo.png";
 
 const VideoGallery = () => {
   const [videos, setVideos] = useState([]);
@@ -753,6 +755,15 @@ const VideoGallery = () => {
                       isDesktop ? "right-1/4 -mr-10" : "right-3"
                     } flex flex-col items-center gap-4 pointer-events-auto z-20`}
                   >
+                    {/* Add logo above like button */}
+                    <div className="flex flex-col items-center mb-2">
+                      <img
+                        src={LogoImage}
+                        alt="Logo"
+                        className="w-10 h-10 object-contain bg-black/30 p-1 rounded-full"
+                      />
+                    </div>
+
                     {/* Like button */}
                     <button
                       className="flex flex-col items-center"
