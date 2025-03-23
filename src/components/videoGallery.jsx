@@ -749,59 +749,63 @@ const VideoGallery = () => {
                     </button>
                   </div>
 
-                  {/* Action buttons */}
+                  {/* Action buttons without circular frames */}
                   <div
                     className={`absolute bottom-20 ${
                       isDesktop ? "right-1/4 -mr-10" : "right-3"
-                    } flex flex-col items-center gap-4 pointer-events-auto z-20`}
+                    } flex flex-col items-center gap-6 pointer-events-auto z-20`}
                   >
-                    {/* Add logo above like button */}
-                    <div className="flex flex-col items-center mb-2">
-                      <img
-                        src={LogoImage}
-                        alt="Logo"
-                        className="w-10 h-10 object-contain bg-black/30 p-1 rounded-full"
-                      />
+                    {/* Logo (keeping the circular style for just the logo) */}
+                    <div className="action-item">
+                      <div className="logo-circle">
+                        <img
+                          src={LogoImage}
+                          alt="Logo"
+                          className="w-10 h-10 object-contain"
+                        />
+                      </div>
                     </div>
 
-                    {/* Like button */}
-                    <button
-                      className="flex flex-col items-center"
-                      onClick={(e) => handleLikeClick(e, video.id)}
-                    >
-                      <div className="bg-black/30 p-3 rounded-full hover:bg-black/50">
+                    {/* Like button - no frame, just the icon */}
+                    <div className="action-item">
+                      <button
+                        className="icon-button"
+                        onClick={(e) => handleLikeClick(e, video.id)}
+                      >
                         <Heart className="w-8 h-8 text-pink-500 fill-pink-500" />
-                      </div>
+                      </button>
                       <span className="text-white text-xs mt-1">
                         {likes[video.id] || 0}
                       </span>
-                    </button>
+                    </div>
 
-                    {/* Share button */}
-                    <button
-                      className="flex flex-col items-center"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        // Implement share functionality
-                        if (navigator.share) {
-                          navigator
-                            .share({
-                              title: `فيديو ${index + 1}`,
-                              text: "شاهد هذا الفيديو الرائع!",
-                              url: window.location.href,
-                            })
-                            .catch((err) => console.log("Share failed:", err));
-                        } else {
-                          // Fallback for browsers that don't support Web Share API
-                          alert("تم نسخ رابط الفيديو!");
-                        }
-                      }}
-                    >
-                      <div className="bg-black/30 p-3 rounded-full hover:bg-black/50">
+                    {/* Share button - no frame, just the icon */}
+                    <div className="action-item">
+                      <button
+                        className="icon-button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          // Implement share functionality
+                          if (navigator.share) {
+                            navigator
+                              .share({
+                                title: `فيديو ${index + 1}`,
+                                text: "شاهد هذا الفيديو الرائع!",
+                                url: window.location.href,
+                              })
+                              .catch((err) =>
+                                console.log("Share failed:", err)
+                              );
+                          } else {
+                            // Fallback for browsers that don't support Web Share API
+                            alert("تم نسخ رابط الفيديو!");
+                          }
+                        }}
+                      >
                         <Share2 className="w-8 h-8 text-white" />
-                      </div>
+                      </button>
                       <span className="text-white text-xs mt-1">مشاركة</span>
-                    </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -810,8 +814,9 @@ const VideoGallery = () => {
         </div>
       )}
 
-      {/* Add this CSS for the like animation */}
+      {/* Add CSS for the styles */}
       <style>{`
+        /* Animation for the like hearts */
         @keyframes like {
           0% {
             opacity: 0;
@@ -833,8 +838,44 @@ const VideoGallery = () => {
             transform: scale(0);
           }
         }
+        
+        /* Animation class for the heart icon */
         .animate-like {
           animation: like 1s ease-in-out forwards;
+        }
+        
+        /* Action items styling */
+        .action-item {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          margin-bottom: 4px;
+        }
+        
+        /* Only the logo gets a circular background */
+        .logo-circle {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          width: 44px;
+          height: 44px;
+          background-color: rgba(0, 0, 0, 0.3);
+          border-radius: 9999px;
+          padding: 2px;
+        }
+        
+        /* Icon buttons have no background */
+        .icon-button {
+          display: flex;
+          justify-content: center;
+          align-items: center;
+          cursor: pointer;
+          padding: 4px;
+          transition: transform 0.2s;
+        }
+        
+        .icon-button:hover {
+          transform: scale(1.2);
         }
       `}</style>
     </div>
