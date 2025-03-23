@@ -1,5 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
-import { collection, getDocs } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  doc,
+  updateDoc,
+  increment,
+} from "firebase/firestore";
 import { firestore } from "../firebase";
 import { useNavigate } from "react-router-dom";
 import {
@@ -12,6 +18,7 @@ import {
   ChevronUp,
   Play,
   Pause,
+  Heart,
 } from "lucide-react";
 
 const VideoGallery = () => {
@@ -36,6 +43,12 @@ const VideoGallery = () => {
   const [playStates, setPlayStates] = useState({});
   // Track when play indicator should be shown
   const [showPlayIndicator, setShowPlayIndicator] = useState(false);
+  // Track likes for each video
+  const [likes, setLikes] = useState({});
+  // Track if like animation is showing
+  const [showLikeAnimation, setShowLikeAnimation] = useState({});
+  // Track last tap time for double-tap detection
+  const lastTapTimeRef = useRef({});
 
   // Check for desktop/mobile viewport
   useEffect(() => {
@@ -63,6 +76,13 @@ const VideoGallery = () => {
         isPlaying: false,
         thumbnailReady: false,
       }));
+
+      // Initialize likes state
+      const initialLikes = {};
+      videoList.forEach((video) => {
+        initialLikes[video.id] = video.likes || 0;
+      });
+      setLikes(initialLikes);
 
       setVideos(videoList);
       setLoading(false);
@@ -347,6 +367,82 @@ const VideoGallery = () => {
     }
   };
 
+  // Handle double tap to like
+  const handleVideoDoubleTap = async (e, videoId) => {
+    e.stopPropagation(); // Prevent toggling play/pause
+
+    const now = new Date().getTime();
+    const lastTap = lastTapTimeRef.current[videoId] || 0;
+    const doubleTapDelay = 300; // ms between taps to count as double-tap
+
+    // Update the last tap time
+    lastTapTimeRef.current[videoId] = now;
+
+    // If double tap detected
+    if (now - lastTap < doubleTapDelay) {
+      // Clear the last tap timer to prevent triple tap
+      lastTapTimeRef.current[videoId] = 0;
+
+      // Calculate tap position for animation
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      // Update likes in state and show animation
+      setLikes((prev) => ({
+        ...prev,
+        [videoId]: (prev[videoId] || 0) + 1,
+      }));
+
+      // Show like animation
+      setShowLikeAnimation((prev) => ({
+        ...prev,
+        [videoId]: { show: true, x, y },
+      }));
+
+      // Hide animation after animation completes
+      setTimeout(() => {
+        setShowLikeAnimation((prev) => ({
+          ...prev,
+          [videoId]: { ...prev[videoId], show: false },
+        }));
+      }, 1000);
+
+      try {
+        // Update likes in Firestore
+        const videoRef = doc(firestore, "all_videos", videoId);
+        await updateDoc(videoRef, {
+          likes: increment(1),
+        });
+        console.log("Like added successfully");
+      } catch (err) {
+        console.error("Error adding like:", err);
+      }
+    }
+  };
+
+  // Handle direct like button click (separate from double-tap)
+  const handleLikeClick = async (e, videoId) => {
+    e.stopPropagation(); // Prevent event bubbling
+
+    // Update likes in state
+    setLikes((prev) => ({
+      ...prev,
+      [videoId]: (prev[videoId] || 0) + 1,
+    }));
+
+    try {
+      // Update likes in Firestore
+      const videoRef = doc(firestore, "all_videos", videoId);
+      await updateDoc(videoRef, {
+        likes: increment(1),
+      });
+      console.log("Like added successfully");
+    } catch (err) {
+      console.error("Error adding like:", err);
+    }
+  };
+
   // Navigate between videos
   const handleNavigation = (direction) => {
     if (direction === "next" && activeVideoIndex < videos.length - 1) {
@@ -373,6 +469,12 @@ const VideoGallery = () => {
           if (videos[activeVideoIndex]) {
             const e = { stopPropagation: () => {} };
             togglePlayPause(e, videos[activeVideoIndex].id);
+          }
+        } else if (e.key === "l") {
+          // Added 'l' key for liking (optional)
+          if (videos[activeVideoIndex]) {
+            const e = { stopPropagation: () => {} };
+            handleLikeClick(e, videos[activeVideoIndex].id);
           }
         }
       }
@@ -472,9 +574,18 @@ const VideoGallery = () => {
 
               {/* Overlay with info */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent/0 flex flex-col justify-end p-3">
-                <p className="text-white text-sm font-bold truncate">
-                  فيديو {index + 1}
-                </p>
+                <div className="flex justify-between items-center">
+                  <p className="text-white text-sm font-bold truncate">
+                    فيديو {index + 1}
+                  </p>
+                  {/* Show likes count in grid view too */}
+                  <div className="flex items-center">
+                    <Heart className="w-4 h-4 text-pink-500 fill-pink-500 ml-1" />
+                    <span className="text-white text-xs">
+                      {likes[video.id] || 0}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           ))}
@@ -517,7 +628,10 @@ const VideoGallery = () => {
           {/* Desktop: Keyboard shortcuts help */}
           {isDesktop && (
             <div className="absolute top-3 right-3 z-50 bg-black/50 p-2 rounded text-white text-xs">
-              <p>↑/↓: التنقل | م: كتم | مسافة: تشغيل/إيقاف | Esc: إغلاق</p>
+              <p>
+                ↑/↓: التنقل | م: كتم | مسافة: تشغيل/إيقاف | ل: إعجاب | Esc:
+                إغلاق
+              </p>
             </div>
           )}
 
@@ -535,12 +649,13 @@ const VideoGallery = () => {
                 className="video-container h-full w-full snap-start snap-always relative flex items-center justify-center"
                 data-id={video.id}
               >
-                {/* Video player container */}
+                {/* Video player container with double-tap detection */}
                 <div
                   className={`relative ${
                     isDesktop ? "w-3/4 h-full mx-auto" : "w-full h-full"
                   }`}
                   onClick={(e) => togglePlayPause(e, video.id)}
+                  onDoubleClick={(e) => handleVideoDoubleTap(e, video.id)}
                 >
                   <video
                     ref={(el) => {
@@ -570,6 +685,27 @@ const VideoGallery = () => {
                       </div>
                     </div>
                   )}
+
+                  {/* Double-tap like animation */}
+                  {showLikeAnimation[video.id]?.show && (
+                    <div
+                      className="pointer-events-none absolute z-20"
+                      style={{
+                        left: `${showLikeAnimation[video.id]?.x}px`,
+                        top: `${showLikeAnimation[video.id]?.y}px`,
+                        transform: "translate(-50%, -50%)",
+                      }}
+                    >
+                      <Heart
+                        className="text-pink-500 fill-pink-500 animate-like"
+                        style={{
+                          width: "80px",
+                          height: "80px",
+                          animation: "like 1s ease-in-out",
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* UI overlay */}
@@ -582,6 +718,13 @@ const VideoGallery = () => {
                   >
                     <div className="flex flex-col">
                       <p className="text-white font-bold">فيديو {index + 1}</p>
+                      {/* Show likes count with heart icon */}
+                      <div className="flex items-center mt-1">
+                        <Heart className="w-4 h-4 text-pink-500 fill-pink-500 ml-1" />
+                        <span className="text-white text-xs">
+                          {likes[video.id] || 0} إعجاب
+                        </span>
+                      </div>
                     </div>
                   </div>
 
@@ -604,15 +747,28 @@ const VideoGallery = () => {
                     </button>
                   </div>
 
-                  {/* Only Share button */}
+                  {/* Action buttons */}
                   <div
                     className={`absolute bottom-20 ${
                       isDesktop ? "right-1/4 -mr-10" : "right-3"
-                    } flex flex-col items-center pointer-events-auto z-20`}
+                    } flex flex-col items-center gap-4 pointer-events-auto z-20`}
                   >
+                    {/* Like button */}
+                    <button
+                      className="flex flex-col items-center"
+                      onClick={(e) => handleLikeClick(e, video.id)}
+                    >
+                      <div className="bg-black/30 p-3 rounded-full hover:bg-black/50">
+                        <Heart className="w-8 h-8 text-pink-500 fill-pink-500" />
+                      </div>
+                      <span className="text-white text-xs mt-1">
+                        {likes[video.id] || 0}
+                      </span>
+                    </button>
+
                     {/* Share button */}
                     <button
-                      className="flex flex-col items-center bg-black/30 p-3 rounded-full hover:bg-black/50"
+                      className="flex flex-col items-center"
                       onClick={(e) => {
                         e.stopPropagation();
                         // Implement share functionality
@@ -630,7 +786,9 @@ const VideoGallery = () => {
                         }
                       }}
                     >
-                      <Share2 className="w-8 h-8 text-white" />
+                      <div className="bg-black/30 p-3 rounded-full hover:bg-black/50">
+                        <Share2 className="w-8 h-8 text-white" />
+                      </div>
                       <span className="text-white text-xs mt-1">مشاركة</span>
                     </button>
                   </div>
@@ -640,6 +798,34 @@ const VideoGallery = () => {
           </div>
         </div>
       )}
+
+      {/* Add this CSS for the like animation */}
+      <style>{`
+        @keyframes like {
+          0% {
+            opacity: 0;
+            transform: scale(0);
+          }
+          15% {
+            opacity: 1;
+            transform: scale(1.3);
+          }
+          30% {
+            transform: scale(0.95);
+          }
+          45%, 80% {
+            transform: scale(1);
+            opacity: 1;
+          }
+          100% {
+            opacity: 0;
+            transform: scale(0);
+          }
+        }
+        .animate-like {
+          animation: like 1s ease-in-out forwards;
+        }
+      `}</style>
     </div>
   );
 };
