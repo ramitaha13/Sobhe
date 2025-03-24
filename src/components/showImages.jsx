@@ -7,16 +7,22 @@ const ShowImages = () => {
   const [images, setImages] = useState([]);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [currentImageIndex, setCurrentImageIndex] = useState(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [viewMode, setViewMode] = useState("grid"); // "grid" or "carousel"
+  const [viewMode, setViewMode] = useState("grid"); // "grid", "carousel", or "slideshow"
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [slideshowSpeed, setSlideshowSpeed] = useState(2000); // 2 seconds per slide
   const carouselRef = useRef(null);
   const fullscreenImageRef = useRef(null);
+  const slideshowTimerRef = useRef(null);
   const navigate = useNavigate();
 
   // Touch handling state
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
+
+  // Selected images for slideshow (initially all)
+  const [slideshowImages, setSlideshowImages] = useState([]);
 
   // Minimum swipe distance (in px)
   const minSwipeDistance = 50;
@@ -27,6 +33,7 @@ const ShowImages = () => {
         const querySnapshot = await getDocs(collection(firestore, "Images"));
         const imageList = querySnapshot.docs.map((doc) => doc.data().image);
         setImages(imageList);
+        setSlideshowImages(imageList); // Initially use all images
         setLoading(false);
       } catch (err) {
         console.error("Error fetching images:", err);
@@ -51,17 +58,22 @@ const ShowImages = () => {
       } else if (e.key === "ArrowLeft") {
         // Navigate to next image (RTL layout)
         navigateImages(1);
+      } else if (e.key === " ") {
+        // Space key to toggle slideshow play/pause
+        if (viewMode === "slideshow") {
+          toggleSlideshow();
+        }
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isFullscreen, currentImageIndex, images.length]);
+  }, [isFullscreen, currentImageIndex, images.length, viewMode, isPlaying]);
 
   // Scroll to center the active image in carousel view
   useEffect(() => {
     if (
-      viewMode === "carousel" &&
+      (viewMode === "carousel" || viewMode === "slideshow") &&
       carouselRef.current &&
       currentImageIndex !== null
     ) {
@@ -82,7 +94,40 @@ const ShowImages = () => {
     }
   }, [viewMode, currentImageIndex]);
 
+  // Slideshow auto-advancing
+  useEffect(() => {
+    if (viewMode === "slideshow" && isPlaying && slideshowImages.length > 0) {
+      slideshowTimerRef.current = setTimeout(() => {
+        // Move to next image
+        let newIndex = currentImageIndex + 1;
+        if (newIndex >= slideshowImages.length) {
+          newIndex = 0; // Loop back to start
+        }
+        setCurrentImageIndex(newIndex);
+      }, slideshowSpeed);
+
+      return () => {
+        if (slideshowTimerRef.current) {
+          clearTimeout(slideshowTimerRef.current);
+        }
+      };
+    }
+  }, [
+    currentImageIndex,
+    isPlaying,
+    viewMode,
+    slideshowImages.length,
+    slideshowSpeed,
+  ]);
+
   const handleBack = () => {
+    // Stop slideshow if running when navigating away
+    if (isPlaying) {
+      setIsPlaying(false);
+      if (slideshowTimerRef.current) {
+        clearTimeout(slideshowTimerRef.current);
+      }
+    }
     navigate("/");
   };
 
@@ -98,28 +143,50 @@ const ShowImages = () => {
   };
 
   const navigateImages = (direction) => {
-    if (images.length <= 1) return;
+    if (slideshowImages.length <= 1) return;
 
     let newIndex = currentImageIndex + direction;
 
     // Loop around if at the end or beginning
-    if (newIndex >= images.length) {
+    if (newIndex >= slideshowImages.length) {
       newIndex = 0;
     } else if (newIndex < 0) {
-      newIndex = images.length - 1;
+      newIndex = slideshowImages.length - 1;
     }
 
     setCurrentImageIndex(newIndex);
   };
 
   const toggleViewMode = () => {
-    setViewMode((prevMode) => (prevMode === "grid" ? "carousel" : "grid"));
-    setCurrentImageIndex(0); // Reset to first image when switching modes
+    // If switching to slideshow, prepare and start it
+    if (viewMode !== "slideshow") {
+      setViewMode("slideshow");
+      setCurrentImageIndex(0); // Start from first image
+      setIsPlaying(true); // Auto-start slideshow
+    } else {
+      // If already in slideshow, switch back to grid
+      setViewMode("grid");
+      setIsPlaying(false);
+      if (slideshowTimerRef.current) {
+        clearTimeout(slideshowTimerRef.current);
+      }
+    }
+  };
+
+  const toggleSlideshow = () => {
+    setIsPlaying(!isPlaying);
+  };
+
+  const changeSlideSpeed = (newSpeed) => {
+    setSlideshowSpeed(newSpeed);
   };
 
   // Handle scroll wheel in carousel view - without preventDefault
   const handleWheel = (e) => {
-    if (viewMode === "carousel" && carouselRef.current) {
+    if (
+      (viewMode === "carousel" || viewMode === "slideshow") &&
+      carouselRef.current
+    ) {
       // Don't use preventDefault() here as wheel events are passive by default
       carouselRef.current.scrollLeft += e.deltaY;
     }
@@ -175,6 +242,10 @@ const ShowImages = () => {
   // Handle carousel image selection
   const selectCarouselImage = (index) => {
     setCurrentImageIndex(index);
+    // If in slideshow mode and user manually selects an image, pause the slideshow
+    if (viewMode === "slideshow" && isPlaying) {
+      setIsPlaying(false);
+    }
   };
 
   // Touch event handlers for fullscreen swipe navigation
@@ -203,6 +274,9 @@ const ShowImages = () => {
       navigateImages(1); // Next image
     }
   };
+
+  // Calculate what images to show based on current mode
+  const displayImages = viewMode === "slideshow" ? slideshowImages : images;
 
   if (loading) {
     return (
@@ -281,21 +355,13 @@ const ShowImages = () => {
             <div className="flex items-center space-x-2 space-x-reverse">
               <button
                 onClick={toggleViewMode}
-                className="px-4 py-2 bg-white text-pink-600 border border-pink-300 rounded-lg hover:bg-pink-50 transition-colors duration-300 flex items-center"
+                className={`px-4 py-2 ${
+                  viewMode === "slideshow"
+                    ? "bg-pink-600 text-white"
+                    : "bg-white text-pink-600 border border-pink-300"
+                } rounded-lg hover:bg-pink-700 hover:text-white transition-colors duration-300 flex items-center`}
               >
-                {viewMode === "grid" ? (
-                  <>
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5 ml-1"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM14 11a1 1 0 011 1v1h1a1 1 0 110 2h-1v1a1 1 0 11-2 0v-1h-1a1 1 0 110-2h1v-1a1 1 0 011-1z" />
-                    </svg>
-                    عرض الشريط
-                  </>
-                ) : (
+                {viewMode === "slideshow" ? (
                   <>
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -306,6 +372,18 @@ const ShowImages = () => {
                       <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                     </svg>
                     عرض الشبكة
+                  </>
+                ) : (
+                  <>
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-5 w-5 ml-1"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
+                    </svg>
+                    عرض الشريط
                   </>
                 )}
               </button>
@@ -330,16 +408,110 @@ const ShowImages = () => {
         {/* Content Section */}
         {images.length > 0 ? (
           <div className="mb-12">
-            {/* Carousel View */}
-            {viewMode === "carousel" && (
+            {/* Slideshow View */}
+            {viewMode === "slideshow" && (
               <div className="bg-white rounded-xl shadow-lg p-6 mb-8">
-                {/* Featured Image */}
-                <div className="mb-8 bg-gray-50 p-4 rounded-lg">
-                  <img
-                    src={images[currentImageIndex]}
-                    alt={`صورة ${currentImageIndex + 1}`}
-                    className="max-h-96 mx-auto object-contain rounded-lg shadow-sm"
-                  />
+                {/* Featured Image - with fade transition effect */}
+                <div
+                  className="mb-8 bg-gray-50 p-4 rounded-lg relative overflow-hidden"
+                  style={{ minHeight: "400px" }}
+                >
+                  <div className="transition-opacity duration-500 ease-in-out">
+                    <img
+                      key={currentImageIndex}
+                      src={slideshowImages[currentImageIndex]}
+                      alt={`صورة ${currentImageIndex + 1}`}
+                      className="max-h-96 max-w-full mx-auto object-contain rounded-lg shadow-sm"
+                    />
+                  </div>
+
+                  {/* Play/Pause Button Overlay */}
+                  <div className="absolute top-4 right-4 flex space-x-2 space-x-reverse">
+                    <button
+                      onClick={toggleSlideshow}
+                      className="bg-black/30 hover:bg-black/50 text-white p-2 rounded-full transition-colors"
+                    >
+                      {isPlaying ? (
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-6 w-6"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                      ) : (
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-6 w-6"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Slideshow controls */}
+                <div className="flex justify-between items-center mb-6">
+                  <div className="text-gray-700">
+                    <span className="font-medium">{currentImageIndex + 1}</span>{" "}
+                    / {slideshowImages.length}
+                  </div>
+
+                  <div className="flex items-center space-x-4 space-x-reverse">
+                    <div className="text-sm text-gray-600">السرعة:</div>
+                    <button
+                      onClick={() => changeSlideSpeed(1000)}
+                      className={`px-2 py-1 rounded ${
+                        slideshowSpeed === 1000
+                          ? "bg-pink-100 text-pink-700"
+                          : "bg-gray-100 text-gray-600"
+                      }`}
+                    >
+                      سريع
+                    </button>
+                    <button
+                      onClick={() => changeSlideSpeed(2000)}
+                      className={`px-2 py-1 rounded ${
+                        slideshowSpeed === 2000
+                          ? "bg-pink-100 text-pink-700"
+                          : "bg-gray-100 text-gray-600"
+                      }`}
+                    >
+                      متوسط
+                    </button>
+                    <button
+                      onClick={() => changeSlideSpeed(4000)}
+                      className={`px-2 py-1 rounded ${
+                        slideshowSpeed === 4000
+                          ? "bg-pink-100 text-pink-700"
+                          : "bg-gray-100 text-gray-600"
+                      }`}
+                    >
+                      بطيء
+                    </button>
+                  </div>
                 </div>
 
                 {/* Thumbnails */}
@@ -348,7 +520,7 @@ const ShowImages = () => {
                   className="flex overflow-x-auto pb-4 space-x-4 space-x-reverse scrollbar-thin scrollbar-thumb-pink-300 scrollbar-track-pink-100 scrollbar-thumb-rounded-full"
                   onWheel={handleWheel}
                 >
-                  {images.map((image, index) => (
+                  {slideshowImages.map((image, index) => (
                     <div
                       key={index}
                       className={`flex-shrink-0 cursor-pointer transition-all duration-300 ${
@@ -372,7 +544,7 @@ const ShowImages = () => {
                   <button
                     onClick={() => navigateImages(-1)}
                     className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors duration-300 flex items-center"
-                    disabled={images.length <= 1}
+                    disabled={slideshowImages.length <= 1}
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -388,13 +560,54 @@ const ShowImages = () => {
                     </svg>
                     السابق
                   </button>
-                  <span className="px-4 py-2 bg-gray-100 rounded-md text-gray-800">
-                    {currentImageIndex + 1} / {images.length}
-                  </span>
+
+                  <button
+                    onClick={toggleSlideshow}
+                    className={`px-4 py-2 text-white rounded-lg transition-colors duration-300 flex items-center ${
+                      isPlaying
+                        ? "bg-gray-600 hover:bg-gray-700"
+                        : "bg-green-600 hover:bg-green-700"
+                    }`}
+                  >
+                    {isPlaying ? (
+                      <>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-5 w-5 ml-1"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                        إيقاف
+                      </>
+                    ) : (
+                      <>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-5 w-5 ml-1"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                        تشغيل
+                      </>
+                    )}
+                  </button>
+
                   <button
                     onClick={() => navigateImages(1)}
                     className="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 transition-colors duration-300 flex items-center"
-                    disabled={images.length <= 1}
+                    disabled={slideshowImages.length <= 1}
                   >
                     التالي
                     <svg
@@ -528,6 +741,52 @@ const ShowImages = () => {
             </svg>
           </button>
 
+          {/* Slideshow control in fullscreen mode */}
+          {viewMode === "slideshow" && (
+            <button
+              onClick={toggleSlideshow}
+              className="absolute top-4 left-4 text-white w-10 h-10 flex items-center justify-center transition-opacity duration-300 z-10 opacity-60 hover:opacity-100"
+            >
+              {isPlaying ? (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-8 w-8"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              ) : (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  className="h-8 w-8"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+                  />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={1.5}
+                    d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                  />
+                </svg>
+              )}
+            </button>
+          )}
+
           {/* Navigation buttons - No background color */}
           {images.length > 1 && (
             <>
@@ -580,7 +839,11 @@ const ShowImages = () => {
             ref={fullscreenImageRef}
           >
             <img
-              src={images[currentImageIndex]}
+              src={
+                viewMode === "slideshow"
+                  ? slideshowImages[currentImageIndex]
+                  : images[currentImageIndex]
+              }
               alt={`Uploaded ${currentImageIndex}`}
               className="max-w-full max-h-full object-contain"
               // Prevent default touch behavior to avoid conflicts
@@ -591,7 +854,10 @@ const ShowImages = () => {
           {/* Image counter */}
           <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white px-4 py-2 text-center text-sm opacity-60">
             <div>
-              {currentImageIndex + 1} / {images.length}
+              {currentImageIndex + 1} /{" "}
+              {viewMode === "slideshow"
+                ? slideshowImages.length
+                : images.length}
             </div>
           </div>
         </div>
