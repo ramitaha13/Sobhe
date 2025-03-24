@@ -109,13 +109,60 @@ const ShowImages = () => {
     setCurrentImageIndex(0); // Reset to first image when switching modes
   };
 
-  // Handle scroll wheel in carousel view
+  // Handle scroll wheel in carousel view - without preventDefault
   const handleWheel = (e) => {
     if (viewMode === "carousel" && carouselRef.current) {
-      e.preventDefault();
+      // Don't use preventDefault() here as wheel events are passive by default
       carouselRef.current.scrollLeft += e.deltaY;
     }
   };
+
+  // Use touch-based scrolling for mobile instead
+  useEffect(() => {
+    const carousel = carouselRef.current;
+    if (!carousel) return;
+
+    let isDown = false;
+    let startX;
+    let scrollLeft;
+
+    const handleMouseDown = (e) => {
+      isDown = true;
+      carousel.classList.add("active");
+      startX = e.pageX - carousel.offsetLeft;
+      scrollLeft = carousel.scrollLeft;
+    };
+
+    const handleMouseLeave = () => {
+      isDown = false;
+      carousel.classList.remove("active");
+    };
+
+    const handleMouseUp = () => {
+      isDown = false;
+      carousel.classList.remove("active");
+    };
+
+    const handleMouseMove = (e) => {
+      if (!isDown) return;
+      e.preventDefault();
+      const x = e.pageX - carousel.offsetLeft;
+      const walk = (x - startX) * 2; // Scroll speed multiplier
+      carousel.scrollLeft = scrollLeft - walk;
+    };
+
+    carousel.addEventListener("mousedown", handleMouseDown);
+    carousel.addEventListener("mouseleave", handleMouseLeave);
+    carousel.addEventListener("mouseup", handleMouseUp);
+    carousel.addEventListener("mousemove", handleMouseMove);
+
+    return () => {
+      carousel.removeEventListener("mousedown", handleMouseDown);
+      carousel.removeEventListener("mouseleave", handleMouseLeave);
+      carousel.removeEventListener("mouseup", handleMouseUp);
+      carousel.removeEventListener("mousemove", handleMouseMove);
+    };
+  }, [carouselRef.current, viewMode]);
 
   // Handle carousel image selection
   const selectCarouselImage = (index) => {
