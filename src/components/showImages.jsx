@@ -11,7 +11,15 @@ const ShowImages = () => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [viewMode, setViewMode] = useState("grid"); // "grid" or "carousel"
   const carouselRef = useRef(null);
+  const fullscreenImageRef = useRef(null);
   const navigate = useNavigate();
+
+  // Touch handling state
+  const [touchStart, setTouchStart] = useState(null);
+  const [touchEnd, setTouchEnd] = useState(null);
+
+  // Minimum swipe distance (in px)
+  const minSwipeDistance = 50;
 
   useEffect(() => {
     const fetchImages = async () => {
@@ -167,6 +175,33 @@ const ShowImages = () => {
   // Handle carousel image selection
   const selectCarouselImage = (index) => {
     setCurrentImageIndex(index);
+  };
+
+  // Touch event handlers for fullscreen swipe navigation
+  const onTouchStart = (e) => {
+    setTouchEnd(null); // Reset touchEnd
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    // In RTL layout, right swipe means previous (navigateImages(-1))
+    // and left swipe means next (navigateImages(1))
+    if (isRightSwipe) {
+      navigateImages(-1); // Previous image
+    }
+    if (isLeftSwipe) {
+      navigateImages(1); // Next image
+    }
   };
 
   if (loading) {
@@ -463,18 +498,23 @@ const ShowImages = () => {
         )}
       </main>
 
-      {/* Fullscreen Modal */}
+      {/* Fullscreen Modal with touch events - Minimal Controls */}
       {isFullscreen && currentImageIndex !== null && (
-        <div className="fixed inset-0 bg-black bg-opacity-95 z-50 flex items-center justify-center">
-          {/* Close button */}
+        <div
+          className="fixed inset-0 bg-black bg-opacity-95 z-50 flex items-center justify-center"
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+        >
+          {/* Close button - No background color */}
           <button
             onClick={closeFullscreen}
-            className="absolute top-4 right-4 text-white bg-pink-600 bg-opacity-70 hover:bg-opacity-100 rounded-full w-10 h-10 flex items-center justify-center transition-all duration-300 z-10"
+            className="absolute top-4 right-4 text-white w-10 h-10 flex items-center justify-center transition-opacity duration-300 z-10 opacity-60 hover:opacity-100"
             aria-label="إغلاق"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6"
+              className="h-8 w-8"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -482,23 +522,23 @@ const ShowImages = () => {
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                strokeWidth={2}
+                strokeWidth={1.5}
                 d="M6 18L18 6M6 6l12 12"
               />
             </svg>
           </button>
 
-          {/* Navigation buttons */}
+          {/* Navigation buttons - No background color */}
           {images.length > 1 && (
             <>
               <button
                 onClick={() => navigateImages(-1)}
-                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white bg-pink-600 bg-opacity-70 hover:bg-opacity-100 rounded-full w-12 h-12 flex items-center justify-center transition-all duration-300"
+                className="absolute right-4 top-1/2 transform -translate-y-1/2 text-white w-12 h-12 flex items-center justify-center transition-opacity duration-300 opacity-60 hover:opacity-100"
                 aria-label="السابق"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6"
+                  className="h-10 w-10"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -506,19 +546,19 @@ const ShowImages = () => {
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    strokeWidth={2}
+                    strokeWidth={1.5}
                     d="M9 5l7 7-7 7"
                   />
                 </svg>
               </button>
               <button
                 onClick={() => navigateImages(1)}
-                className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white bg-pink-600 bg-opacity-70 hover:bg-opacity-100 rounded-full w-12 h-12 flex items-center justify-center transition-all duration-300"
+                className="absolute left-4 top-1/2 transform -translate-y-1/2 text-white w-12 h-12 flex items-center justify-center transition-opacity duration-300 opacity-60 hover:opacity-100"
                 aria-label="التالي"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  className="h-6 w-6"
+                  className="h-10 w-10"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -526,7 +566,7 @@ const ShowImages = () => {
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
-                    strokeWidth={2}
+                    strokeWidth={1.5}
                     d="M15 19l-7-7 7-7"
                   />
                 </svg>
@@ -534,18 +574,25 @@ const ShowImages = () => {
             </>
           )}
 
-          {/* Image container */}
-          <div className="w-full h-full flex items-center justify-center p-4 md:p-8">
+          {/* Image container with swipe functionality */}
+          <div
+            className="w-full h-full flex items-center justify-center p-4 md:p-8"
+            ref={fullscreenImageRef}
+          >
             <img
               src={images[currentImageIndex]}
               alt={`Uploaded ${currentImageIndex}`}
               className="max-w-full max-h-full object-contain"
+              // Prevent default touch behavior to avoid conflicts
+              onTouchStart={(e) => e.stopPropagation()}
             />
           </div>
 
           {/* Image counter */}
-          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white bg-black bg-opacity-50 px-4 py-2 rounded-full">
-            {currentImageIndex + 1} / {images.length}
+          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-white px-4 py-2 text-center text-sm opacity-60">
+            <div>
+              {currentImageIndex + 1} / {images.length}
+            </div>
           </div>
         </div>
       )}
